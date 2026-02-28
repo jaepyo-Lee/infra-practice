@@ -91,6 +91,34 @@ A: apply 완료 → Lock 해제
 
 DynamoDB 테이블에는 `LockID`라는 파티션 키가 반드시 있어야 한다.
 
+#### Lock의 동작 메커니즘 — "점유/해제" 방식
+
+Lock은 **지속적으로 업데이트되는 것이 아니라**, apply 동안만 레코드가 존재하고 끝나면 삭제된다.
+
+```
+apply 시작  → DynamoDB에 LockID 레코드 생성   (잠금)
+apply 진행  → 레코드 그대로 유지              (점유 중)
+apply 완료  → DynamoDB에서 LockID 레코드 삭제  (해제)
+```
+
+DynamoDB 테이블의 항목 수:
+
+| 상태 | 항목 수 |
+|------|--------|
+| 아무도 apply 안 하는 중 | 0개 (비어있음) |
+| 누군가 apply 중 | 1개 (LockID 레코드 존재) |
+| apply 완료 후 | 다시 0개 |
+
+State 파일 자체는 S3에 저장되고, DynamoDB는 오직 **"지금 누가 쓰고 있냐"** 만 관리한다.
+
+#### Lock이 해제되지 않는 경우
+
+apply 도중 강제 종료되면 Lock이 남아있을 수 있다. 이때는 수동으로 해제:
+
+```bash
+terraform force-unlock <LOCK_ID>
+```
+
 ### backend는 변수를 쓸 수 없다
 
 Terraform의 유명한 제약이다:

@@ -76,7 +76,7 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 1 — 네트워크 기초 (Network Foundation)
 > 목표: 모든 AWS 인프라의 기반이 되는 네트워크를 직접 설계하고 구현한다
 
-- [ ] VPC 생성 (CIDR 설계)
+- [x] VPC 생성 (CIDR 설계)
 - [ ] Public / Private / DB 서브넷 (Multi-AZ)
 - [ ] Internet Gateway 연결
 - [ ] NAT Gateway (AZ별 HA 구성)
@@ -162,9 +162,9 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 7 — IaC 고도화 (Terraform Best Practices)
 > 목표: 팀에서 실제로 사용 가능한 수준의 Terraform 코드를 작성한다
 
-- [ ] Remote Backend 구성 (S3 + DynamoDB State Lock)
+- [x] Remote Backend 구성 (S3 + DynamoDB State Lock)
 - [ ] 환경 분리 (dev / staging / prod)
-- [ ] 재사용 가능한 모듈 구조 설계
+- [x] 재사용 가능한 모듈 구조 설계
 - [ ] `terraform.tfvars` 환경별 분리 (`.gitignore` 적용)
 - [ ] `data source` 활용 (AMI 최신 버전 자동 참조 등)
 - [ ] `locals`, `count`, `for_each` 활용
@@ -275,13 +275,13 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| Phase 1 | Network Foundation | 🔲 미시작 |
+| Phase 1 | Network Foundation | 🔄 진행중 (1/6) |
 | Phase 2 | Security Layer | 🔲 미시작 |
 | Phase 3 | Web Tier | 🔲 미시작 |
 | Phase 4 | Application Tier | 🔲 미시작 |
 | Phase 5 | Database Tier | 🔲 미시작 |
 | Phase 6 | Observability | 🔲 미시작 |
-| Phase 7 | IaC Best Practices | 🔲 미시작 |
+| Phase 7 | IaC Best Practices | 🔄 진행중 (2/7) |
 
 ---
 
