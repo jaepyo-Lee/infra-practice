@@ -182,3 +182,73 @@ dev/prod 환경 분리가 올바르게 구현되어 있는지 확인한다:
 ```
 
 모든 피드백은 학습자의 성장을 격려하는 톤으로, 구체적이고 실행 가능하게 제공한다.
+
+---
+
+## Best Practice 자동 수정 모드
+
+`/tf-review` 실행 시 인수(ARGUMENTS)에 다음 키워드가 포함된 경우 이 모드로 동작한다:
+- `fix`, `수정`, `best practice`, `best-practice`, `고쳐`, `만들어줘`
+
+### 이 모드에서만 코드 직접 작성이 허용된다
+
+평가 모드와 달리, 이 모드에서는 실제 파일을 수정한다.
+
+### 수정 절차
+
+1. **현재 파일 전부 읽기** — 모든 `.tf` 파일을 읽어 문제를 파악한다
+2. **Best Practice 기준 적용** — 아래 기준으로 각 파일을 수정한다
+3. **주석 필수 작성** — 모든 수정 사항에 왜 이렇게 했는지 주석으로 설명한다
+4. **수정 결과 요약 출력** — 어떤 파일을 왜 수정했는지 목록으로 정리한다
+
+### Best Practice 수정 기준
+
+**파일 구조**
+- `modules/*/` 폴더는 반드시 `main.tf`, `variables.tf`, `outputs.tf`로 분리한다
+- `envs/*/` 폴더는 terraform 설정, provider, module 호출만 포함한다
+- 리소스를 직접 `envs/`에 선언하지 않는다
+
+**variables.tf**
+- 모든 variable에 `type`과 `description`을 명시한다
+- 필수값은 `default`를 생략하여 호출자가 반드시 전달하도록 강제한다
+- 선택값은 `default`를 명시한다
+- description은 "cidr", "vpc" 같은 단어 반복이 아닌 실제 용도와 예시를 포함한다
+
+**outputs.tf**
+- 다른 모듈이 참조할 값을 모두 노출한다 (VPC: `vpc_id`, `vpc_cidr_block`)
+- 출력 이름은 `리소스_속성` 형태로 명확하게 짓는다 (예: `vpc_id`, `subnet_ids`)
+- `value = ""`처럼 빈 값은 실제 리소스 속성으로 채운다
+
+**main.tf (모듈)**
+- AWS 권장 옵션을 명시적으로 작성한다 (VPC: `enable_dns_support`, `enable_dns_hostnames`)
+- `tags`는 `merge()`를 사용해 공통 태그 + 리소스별 Name 태그를 합산한다
+
+**main.tf (envs)**
+- `required_version`은 `>= 1.5.0` 이상을 권장한다
+- provider `version`은 `~> 5.0` 형태로 메이저 버전을 고정한다
+- `default_tags`를 provider에 설정해 모든 리소스에 자동 태그를 적용한다
+- `source`는 파일(`.tf`)이 아닌 디렉토리 경로를 가리킨다
+
+**CIDR 설계**
+- VPC용 CIDR은 `/16` 이상을 사용한다 (`/24`는 단일 서브넷 크기)
+
+### 수정 결과 출력 형식
+
+```
+## Best Practice 수정 완료
+
+### 수정된 파일 목록
+| 파일 | 주요 변경 내용 |
+|------|--------------|
+| modules/vpc/main.tf | enable_dns_support/hostnames 추가 |
+| modules/vpc/variables.tf | description 보강, default 정리 |
+| modules/vpc/outputs.tf | 빈 value를 실제 리소스 속성으로 교체 |
+| envs/dev/vpc/main.tf | provider 버전 업, default_tags 추가 |
+| envs/dev/vpc/variables.tf | description 보강, CIDR /16 수정 |
+
+### 핵심 학습 포인트
+[수정하면서 가장 중요한 개념 2~3가지를 설명]
+
+### 다음 단계
+[수정 이후 해야 할 작업]
+```

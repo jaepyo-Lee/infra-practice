@@ -1,6 +1,6 @@
 # VPC (Virtual Private Cloud)
 
-> 마지막 업데이트: 2026-02-28
+> 마지막 업데이트: 2026-02-28 (DNS 옵션 상세 추가)
 
 ---
 
@@ -93,6 +93,56 @@ Destination     Target
 | 대역폭 | 최대 100 Gbps | 인스턴스 타입 제한 |
 
 실무에서는 NAT Gateway. **단, AZ당 하나씩** 만들어야 AZ 장애 시에도 Private Subnet이 아웃바운드 통신이 된다.
+
+### VPC DNS 옵션 — enable_dns_support vs enable_dns_hostnames
+
+두 옵션은 역할이 다르며, **둘 다 켜야 의미가 있다.**
+
+#### `enable_dns_support = true`
+
+AWS가 VPC 안에 **내부 DNS 서버를 활성화**한다는 뜻이다. "DNS 서버 자체를 켜는 스위치"다.
+
+이 DNS 서버의 주소는 항상:
+- `VPC CIDR의 두 번째 IP` (예: VPC가 `10.0.0.0/16`이면 → `10.0.0.2`)
+- 또는 링크 로컬 주소 `169.254.169.253`
+
+이 옵션이 꺼져 있으면 VPC 내부 인스턴스가 DNS 쿼리 자체를 보낼 수 없다.
+
+#### `enable_dns_hostnames = true`
+
+퍼블릭 IP를 가진 EC2 인스턴스에 **DNS 이름을 자동 부여**한다.
+
+켜지면 인스턴스에 이런 이름이 생긴다:
+```
+ec2-13-125-100-200.ap-northeast-2.compute.amazonaws.com
+```
+
+꺼져 있으면 퍼블릭 IP는 있지만 DNS 이름이 없다.
+
+#### 조합별 결과
+
+| support | hostnames | 결과 |
+|---------|-----------|------|
+| false | true | DNS 서버 자체가 없으니 hostnames 무의미 |
+| true | false | DNS 서버는 있지만 인스턴스 이름이 부여 안 됨 |
+| true | true | DNS 서버도 있고, 이름도 생성됨 ✅ |
+
+#### 왜 실무에서 중요한가
+
+RDS, ALB, EFS, ECS 등 **AWS 관리형 서비스는 IP가 아닌 DNS 이름으로 접근**한다.
+
+```
+# RDS 엔드포인트 예시
+mydb.xxxxxx.ap-northeast-2.rds.amazonaws.com
+```
+
+EC2에서 이 이름을 해석하려면 `enable_dns_support = true`가 반드시 필요하다.
+이 옵션이 꺼져 있으면 같은 VPC 안에서도 RDS 연결 자체가 불가능하다.
+
+> AWS 기본값은 둘 다 `true`지만, Terraform에서는 명시적으로 쓰는 게 Best Practice다.
+> 코드를 읽을 때 의도가 명확해지고, 다른 사람이 변경하다 실수로 끄는 것을 방지한다.
+
+---
 
 ### 실무에서 자주 하는 실수
 

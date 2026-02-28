@@ -1,0 +1,16 @@
+# Terraform state
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# 민감한 변수값 (패스워드, API Key 등이 포함될 수 있음)
+*.tfvars
+*.tfvars.json
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
