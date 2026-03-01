@@ -25,3 +25,19 @@ variable "tags" {
   # default = {}: tags는 선택적이므로 빈 맵을 기본값으로 설정합니다.
   # 호출부에서 tags를 전달하면 main.tf의 merge()를 통해 Name 태그와 합산됩니다.
 }
+
+
+variable "public_subnet_cidrs" {
+  type        = map(string)
+  description = "Public Subnet { AZ => CIDR } 맵. for_each의 키가 AZ 이름이 되어 순서 변경에 안전하다 (예: {\"ap-northeast-2a\" = \"10.0.1.0/24\"})"
+}
+
+variable "private_nat_subnet_cidrs" {
+  type        = map(string)
+  description = "Private NAT Subnet { AZ => CIDR } 맵. NAT Gateway를 통해 아웃바운드 인터넷만 허용하는 App 서버용 서브넷 (예: {\"ap-northeast-2a\" = \"10.0.11.0/24\"})"
+}
+
+variable "private_full_subnet_cidrs" {
+  type        = map(string)
+  description = "Private Full Subnet { AZ => CIDR } 맵. 인터넷 접근이 완전히 차단된 DB 전용 서브넷. VPC 내부 통신만 허용 (예: {\"ap-northeast-2a\" = \"10.0.21.0/24\"})"
+}

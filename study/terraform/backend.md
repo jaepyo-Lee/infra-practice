@@ -1,6 +1,6 @@
 # Terraform Backend (backend.tf)
 
-> 마지막 업데이트: 2026-02-28
+> 마지막 업데이트: 2026-03-01
 
 ---
 
@@ -187,7 +187,44 @@ envs/
 
 ---
 
-## 4. 직접 해볼 것
+## 4. `terraform init` 관련 플래그
+
+### `-migrate-state`
+
+backend 설정이 바뀌었을 때 **기존 State를 새 backend로 이동**하는 플래그.
+
+```bash
+terraform init -migrate-state
+```
+
+가장 흔한 사용 시나리오 — Local → S3 전환:
+
+```
+1. backend.tf 없이 terraform apply 실행
+   → terraform.tfstate가 로컬에 생성됨
+
+2. backend.tf 추가 (S3 backend 설정)
+
+3. terraform init -migrate-state 실행
+   → 로컬 tfstate를 S3로 복사 후 로컬 파일 제거
+```
+
+플래그 없이 `terraform init`을 실행하면 Terraform이 인터랙티브로 질문한다:
+`"Do you want to copy existing state to the new backend? yes/no"`
+`-migrate-state`는 그 질문에 자동으로 "yes"를 답하는 것과 같다.
+
+### `-reconfigure`와의 차이
+
+| 플래그 | 동작 |
+|--------|------|
+| `-migrate-state` | 기존 State를 새 backend로 복사 후 이동 |
+| `-reconfigure` | 기존 State 무시, 새 backend를 처음부터 초기화 |
+
+`-reconfigure`는 State를 버리는 것이라 **데이터 손실 위험**이 있다. 처음 init하거나 State가 없을 때만 사용한다.
+
+---
+
+## 5. 직접 해볼 것
 
 현재 `envs/dev/vpc/`에 `backend.tf`가 있는지 확인하고, 없다면 만들어보자.
 

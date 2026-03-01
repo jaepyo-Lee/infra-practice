@@ -14,3 +14,18 @@ output "vpc_cidr_block" {
   description = "VPC의 CIDR 블록. 서브넷 CIDR 계획 또는 보안그룹 내부 트래픽 허용 규칙 정의 시 참조합니다."
   # 예: aws_security_group의 ingress cidr_blocks = [module.vpc.vpc_cidr_block]
 }
+
+output "public_subnet_ids" {
+  value       = values(aws_subnet.public)[*].id
+  description = "Public Subnet ID 목록. ALB, NAT Gateway 배치에 사용. values()로 맵에서 리스트로 변환."
+}
+
+output "private_nat_subnet_ids" {
+  value       = values(aws_subnet.private_nat)[*].id
+  description = "Private NAT Subnet ID 목록. EC2 Auto Scaling Group 배치에 사용."
+}
+
+output "private_full_subnet_ids" {
+  value       = values(aws_subnet.private_full)[*].id
+  description = "Private Full Subnet ID 목록. RDS Subnet Group, ElastiCache Subnet Group에 사용."
+}

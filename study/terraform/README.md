@@ -6,4 +6,5 @@
 | 핵심 블록: resource, variable, output, module 개념 및 데이터 흐름 | [core-blocks.md](./core-blocks.md) | 2026-02-28 |
 | Data Source: 외부 리소스 읽기, aws_availability_zones, terraform_remote_state | [data-source.md](./data-source.md) | 2026-02-28 |
 | tfvars 관리: .tfvars.example 패턴, gitignore, 민감값 처리, 우선순위 | [tfvars.md](./tfvars.md) | 2026-02-28 |
-| Backend: State 원격 저장, S3+DynamoDB, State Lock, key 경로 설계 | [backend.md](./backend.md) | 2026-02-28 |
+| Backend: State 원격 저장, S3+DynamoDB, State Lock, key 경로 설계 | [backend.md](./backend.md) | 2026-03-01 |
+| Lifecycle & Import: prevent_destroy, State Drift, import, state mv | [lifecycle-and-import.md](./lifecycle-and-import.md) | 2026-03-01 |

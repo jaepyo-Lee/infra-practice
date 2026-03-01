@@ -30,3 +30,31 @@ provider "aws" {
     # 각 module 호출마다 tags를 일일이 전달하지 않아도 됩니다.
   }
 }
+
+locals {
+  # AZ를 키로 사용하는 맵 구조.
+  # 이유: 리스트+인덱스 방식은 AZ 순서가 바뀌면 기존 서브넷이 삭제/재생성되는 위험이 있다.
+  # 맵 방식은 AZ 이름이 키이므로 순서 변경에 영향받지 않는다.
+  # var.cidr은 실행 시점에 결정되므로 variable default가 아닌 locals에서 계산한다.
+  subnet_config = {
+    "ap-northeast-2a" = { public = cidrsubnet(var.cidr, 8, 1), nat = cidrsubnet(var.cidr, 8, 11), full = cidrsubnet(var.cidr, 8, 21) }
+    "ap-northeast-2c" = { public = cidrsubnet(var.cidr, 8, 2), nat = cidrsubnet(var.cidr, 8, 12), full = cidrsubnet(var.cidr, 8, 22) }
+  }
+}
+
+module "main" {
+  source = "../../../modules/network"
+  # source는 디렉토리 경로를 가리킵니다. 파일(main.tf)이 아닙니다.
+  # Terraform은 해당 디렉토리의 모든 .tf 파일을 자동으로 로드합니다.
+  name = var.name
+  cidr = var.cidr
+  tags = var.tags
+  # tags를 모듈에도 전달하는 이유: modules/vpc의 merge()가 Name 태그를 추가하기 때문입니다.
+  # provider default_tags + 모듈 내 merge() = 완전한 태그 세트가 됩니다.
+
+  # subnet_config에서 서브넷 타입별로 { az => cidr } 맵을 추출해서 전달한다.
+  # for expression: { for 키, 값 in 원본맵 : 새키 => 새값 }
+  public_subnet_cidrs       = { for az, cfg in local.subnet_config : az => cfg.public }
+  private_nat_subnet_cidrs  = { for az, cfg in local.subnet_config : az => cfg.nat }
+  private_full_subnet_cidrs = { for az, cfg in local.subnet_config : az => cfg.full }
+}
