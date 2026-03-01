@@ -20,6 +20,11 @@ Terraform이 알고 있는 세계(State)와 AWS 실제 세계가 어긋나는 �
          → 다음 apply: "없는 줄 알고" 재생성 시도
          → AWS: "이미 있는데?" → Conflict 에러 (InvalidSubnet.Conflict)
 
+원인 3 (흔한 오해): terraform init -migrate-state 후 "기존 State"를 삭제
+         → migrate-state는 State를 "이동"이 아니라 "복사"한다
+         → 원본(이전 backend)이 자동 삭제되지 않는다
+         → 새 backend의 State를 실수로 삭제하면 Terraform이 기억을 잃음
+
 원인 3: count → for_each 전환 시 State 주소 변경
          → 기존: aws_subnet.public[0]
          → 신규: aws_subnet.public["ap-northeast-2a"]

@@ -236,145 +236,12 @@ RFC 1918에서 정의한 사설 IP 대역은 인터넷 라우터가 라우팅하
 
 ---
 
-## 2. Terraform 구현
+## 2. Terraform 구현 참고
 
-### 필요한 리소스 목록
-
-```
-aws_vpc
-aws_subnet                    × 6 (Public 2, App 2, DB 2)
-aws_internet_gateway
-aws_nat_gateway               × 2 (AZ별)
-aws_eip                       × 2 (NAT Gateway용)
-aws_route_table               × 4 (Public 1, Private AZ-a 1, Private AZ-b 1, DB 1)
-aws_route_table_association   × 6 (각 Subnet에 Route Table 연결)
-```
-
-### aws_vpc — 핵심 argument
-
-```hcl
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-
-  # DNS 설정 — 둘 다 true여야 EC2에서 도메인명으로 통신 가능
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "main-vpc"
-  }
-}
-```
-
-### aws_subnet
-
-```hcl
-# Public Subnet — AZ-a
-resource "aws_subnet" "public_a" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-northeast-2a"
-
-  # true면 인스턴스 생성 시 Public IP 자동 할당
-  map_public_ip_on_launch = true
-
-  tags = { Name = "public-subnet-a" }
-}
-```
-
-### Internet Gateway
-
-```hcl
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = { Name = "main-igw" }
-}
-```
-
-### NAT Gateway (AZ별)
-
-```hcl
-# EIP는 NAT Gateway에 붙는 고정 Public IP
-resource "aws_eip" "nat_a" {
-  domain     = "vpc"
-  depends_on = [aws_internet_gateway.main]  # IGW가 먼저 있어야 함
-}
-
-resource "aws_nat_gateway" "a" {
-  allocation_id = aws_eip.nat_a.id
-  subnet_id     = aws_subnet.public_a.id   # 반드시 Public Subnet에!
-
-  tags = { Name = "nat-gw-a" }
-}
-```
-
-### Route Table
-
-```hcl
-# Public Route Table
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = { Name = "public-rt" }
-}
-
-# Private Route Table (AZ-a) — NAT 경유
-resource "aws_route_table" "private_a" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.a.id
-  }
-
-  tags = { Name = "private-rt-a" }
-}
-
-# Subnet과 Route Table 연결
-resource "aws_route_table_association" "public_a" {
-  subnet_id      = aws_subnet.public_a.id
-  route_table_id = aws_route_table.public.id
-}
-```
-
-### 리소스 간 참조 관계
-
-```
-aws_vpc
-  ├── aws_subnet (vpc_id)
-  │     └── aws_route_table_association (subnet_id)
-  ├── aws_internet_gateway (vpc_id)
-  │     └── aws_route_table.public (gateway_id)
-  └── aws_route_table (vpc_id)
-
-aws_eip
-  └── aws_nat_gateway (allocation_id)
-        └── aws_route_table.private (nat_gateway_id)
-
-aws_subnet.public_a
-  └── aws_nat_gateway (subnet_id)  ← NAT는 Public Subnet에 위치
-```
-
-### 자주 쓰이는 패턴 — count 반복
-
-```hcl
-variable "public_subnet_cidrs" {
-  default = ["10.0.1.0/24", "10.0.2.0/24"]
-}
-
-resource "aws_subnet" "public" {
-  count             = length(var.public_subnet_cidrs)
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.public_subnet_cidrs[count.index]
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-}
-```
+VPC/Subnet/IGW/NAT/Route Table의 Terraform 리소스 구현은 아래를 참고한다:
+- [핵심 블록 & for_each 패턴](../terraform/core-blocks.md)
+- [모듈 구조 컨벤션](../terraform/module-structure.md)
+- [lifecycle & import (State 관리)](../terraform/lifecycle-and-import.md)
 
 ---
 
@@ -394,28 +261,19 @@ resource "aws_subnet" "public" {
 - `aws_db_subnet_group` → `subnet_ids` 참조
 - `aws_elasticache_subnet_group` → `subnet_ids` 참조
 
-VPC의 output은 프로젝트 전체에서 가장 많이 참조되는 값이다:
-
-```hcl
-# modules/network/outputs.tf 예시
-output "vpc_id"                  { value = aws_vpc.main.id }
-output "public_subnet_ids"       { value = [aws_subnet.public_a.id, aws_subnet.public_b.id] }
-output "private_app_subnet_ids"  { value = [aws_subnet.app_a.id, aws_subnet.app_b.id] }
-output "private_db_subnet_ids"   { value = [aws_subnet.db_a.id, aws_subnet.db_b.id] }
-```
+VPC의 output은 프로젝트 전체에서 가장 많이 참조되는 값이다 — `vpc_id`, `public_subnet_ids`, `private_app_subnet_ids`, `private_db_subnet_ids`.
 
 ---
 
 ## 4. 직접 해볼 것
 
-**지금 해볼 실습**: `modules/network/`의 input/output을 설계해보자.
+**지금 해볼 실습**: 이 프로젝트의 3-Tier 아키텍처에서 VPC 설계도를 직접 그려보자.
 
-`variables.tf`에서 받아야 할 값 목록을 직접 생각해보자:
-- VPC CIDR, 각 Subnet CIDR, AZ 목록, 환경 이름(env) 등
+- AZ를 몇 개 쓸지 (최소 2개)
+- Public/Private/DB 서브넷 각각의 역할과 통신 방향
+- NAT Gateway 위치와 개수 (AZ마다 1개가 Best Practice인 이유)
 
-어떤 값을 변수로 받고 어떤 값을 하드코딩할지 결정하는 것이 모듈 설계의 핵심이다.
-
-**참고 문서**:
-- [aws_vpc | Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc)
-- [aws_nat_gateway | Terraform Registry](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway)
-- 검색 키워드: `terraform vpc multi-az nat gateway per az`, `aws vpc route table association terraform`
+**AWS 공식 문서**:
+- [VPC and subnets](https://docs.aws.amazon.com/vpc/latest/userguide/configure-your-vpc.html)
+- [NAT Gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+- 검색 키워드: `aws vpc multi-az design`, `nat gateway high availability`

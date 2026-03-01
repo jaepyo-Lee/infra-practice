@@ -1,6 +1,6 @@
 # Terraform 핵심 블록: resource, variable, output, module
 
-마지막 업데이트: 2026-02-28 (output 위치, scope, for_each 추가)
+마지막 업데이트: 2026-03-01 (each.key/each.value 설명 추가)
 
 ---
 
@@ -310,6 +310,57 @@ module.vpc["mgmt"].vpc_id
 |------|---------------|
 | 일반 module 블록 | `module.vpc_app.aws_vpc.main` |
 | for_each | `module.vpc["app"].aws_vpc.main` |
+
+### `each` 객체 — for_each 블록 안에서만 쓸 수 있는 특수 객체
+
+`for_each`에 맵을 넣으면, 각 반복마다 Terraform이 `each` 객체를 자동으로 제공한다.
+
+```hcl
+resource "aws_subnet" "public" {
+  for_each = {
+    "ap-northeast-2a" = "10.0.1.0/24"
+    "ap-northeast-2c" = "10.0.2.0/24"
+  }
+
+  availability_zone = each.key    # 맵의 키: "ap-northeast-2a" 또는 "ap-northeast-2c"
+  cidr_block        = each.value  # 맵의 값: "10.0.1.0/24" 또는 "10.0.2.0/24"
+}
+```
+
+| 반복 | `each.key` | `each.value` |
+|------|-----------|-------------|
+| 1번째 | `"ap-northeast-2a"` | `"10.0.1.0/24"` |
+| 2번째 | `"ap-northeast-2c"` | `"10.0.2.0/24"` |
+
+- `each.key` = 이번 반복의 **맵 키**
+- `each.value` = 이번 반복의 **맵 값** (맵 값이 객체면 `each.value.cidr` 처럼 중첩 접근 가능)
+
+**리소스 주소 형태**: Terraform은 각 인스턴스를 키 기반으로 관리한다.
+
+```
+aws_subnet.public["ap-northeast-2a"]
+aws_subnet.public["ap-northeast-2c"]
+```
+
+**for_each에 set(string)을 넣으면**: `each.key`와 `each.value`가 동일하다 (set은 값 자체가 키).
+
+```hcl
+for_each = toset(["a", "b", "c"])
+# each.key == each.value == "a", "b", "c"
+```
+
+**for_each outputs — `values()` 필수**
+
+for_each 리소스는 맵 형태로 관리되므로 ID 목록을 뽑으려면 `values()`로 먼저 리스트로 변환해야 한다.
+
+```hcl
+output "public_subnet_ids" {
+  value = values(aws_subnet.public)[*].id
+  # values()로 맵 → 리스트 변환 후 [*].id 적용
+}
+```
+
+---
 
 ### ⚠️ for_each key 변경 시 destroy/recreate 위험
 

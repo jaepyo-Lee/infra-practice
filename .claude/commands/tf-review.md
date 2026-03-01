@@ -100,8 +100,10 @@ dev/prod 환경 분리가 올바르게 구현되어 있는지 확인한다:
 
 **모듈 구조 완성도**
 - 각 모듈 폴더에 `main.tf`, `variables.tf`, `outputs.tf`가 모두 있는지
-- README에 정의된 모듈 목록 중 구현된 것 확인:
-  - `modules/vpc/`
+- `modules/` 폴더를 Glob으로 직접 탐색해 실제 존재하는 모듈 목록을 확인한다 (하드코딩된 목록 대신)
+- 탐색한 모듈 목록을 README.md의 모듈 체크리스트와 대조한다
+- 참고 예시 (프로젝트 진행에 따라 달라질 수 있음):
+  - `modules/network/` (vpc → network로 리팩토링됨)
   - `modules/security_groups/`
   - `modules/alb/`
   - `modules/cloudfront/`
