@@ -1,9 +1,17 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "6.17.0"
+    }
+  }
+}
 # modules/vpc/main.tf
 # VPC 모듈의 핵심 리소스만 정의합니다.
 # variable, output은 각각 variables.tf, outputs.tf로 분리하는 것이 Terraform 컨벤션입니다.
 # 이유: 파일 역할이 명확해져 팀 협업과 유지보수가 쉬워집니다.
 
-resource "aws_vpc" "main" {
+resource "aws_vpc" "vpc" {
   cidr_block = var.cidr
 
   # DNS 옵션 두 가지를 명시적으로 활성화합니다.
@@ -21,4 +29,11 @@ resource "aws_vpc" "main" {
       Name = "${var.name}-vpc"
     }
   )
+}
+
+resource "aws_subnet" "subnet" {
+  vpc_id = aws_vpc.vpc.id
+  cidr_block = ""
+  availability_zone = ""
+  map_public_ip_on_launch = false
 }

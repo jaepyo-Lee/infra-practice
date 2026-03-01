@@ -2,7 +2,7 @@
 # destroy-all.sh
 # 초기화된 모든 Terraform 모듈을 역의존성 순서로 삭제한다.
 # 이 스크립트는 Claude의 /destroy-all 스킬이 자동 생성합니다.
-# 생성일: 2026-02-28
+# 생성일: 2026-02-28 / 수정일: 2026-03-01
 
 set -e
 
@@ -57,7 +57,7 @@ fi
 # destroy_module "$ROOT_DIR/envs/dev/security"
 
 # Phase 1 — Network Foundation
-destroy_module "$ROOT_DIR/envs/dev/vpc"
+destroy_module "$ROOT_DIR/envs/dev/network"
 
 echo ""
 echo "=============================="

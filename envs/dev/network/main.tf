@@ -30,15 +30,3 @@ provider "aws" {
     # 각 module 호출마다 tags를 일일이 전달하지 않아도 됩니다.
   }
 }
-
-module "vpc" {
-  source = "../../../modules/vpc"
-  # source는 디렉토리 경로를 가리킵니다. 파일(main.tf)이 아닙니다.
-  # Terraform은 해당 디렉토리의 모든 .tf 파일을 자동으로 로드합니다.
-
-  name = var.name
-  cidr = var.cidr
-  tags = var.tags
-  # tags를 모듈에도 전달하는 이유: modules/vpc의 merge()가 Name 태그를 추가하기 때문입니다.
-  # provider default_tags + 모듈 내 merge() = 완전한 태그 세트가 됩니다.
-}
