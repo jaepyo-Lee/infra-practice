@@ -78,7 +78,7 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 
 - [x] VPC 생성 (CIDR 설계)
 - [x] Public / Private / DB 서브넷 (Multi-AZ)
-- [ ] Internet Gateway 연결
+- [x] Internet Gateway 연결
 - [ ] NAT Gateway (AZ별 HA 구성)
 - [ ] Route Table 설계 및 서브넷 연결
 - [ ] VPC Flow Logs 활성화
@@ -275,7 +275,7 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| Phase 1 | Network Foundation | 🔄 진행중 (2/6) |
+| Phase 1 | Network Foundation | 🔄 진행중 (3/6) |
 | Phase 2 | Security Layer | 🔲 미시작 |
 | Phase 3 | Web Tier | 🔲 미시작 |
 | Phase 4 | Application Tier | 🔲 미시작 |

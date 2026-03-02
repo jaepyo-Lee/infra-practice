@@ -3,7 +3,7 @@
 > **이 파일의 범위**: 파일/폴더 구조 컨벤션, provider 위치 규칙, 모듈별 outputs 목록
 > **개념 및 데이터 흐름**: [core-blocks.md](./core-blocks.md) 참고
 
-마지막 업데이트: 2026-02-28
+마지막 업데이트: 2026-03-02
 
 ---
 
@@ -122,7 +122,45 @@ HashiCorp 공식 예제, Terraform Registry 모두 `modules/`를 사용한다.
 
 ---
 
+## 5. 모듈 분리 vs State 분리 — 흔한 오개념
+
+"모듈을 나누면 리소스가 각각 따로 생성되는 것 아닌가?" → **아니다.**
+
+### 모듈 분리 = 코드 조직화
+
+```
+envs/dev/network/ 에서 terraform apply
+  → module.network.aws_vpc.vpc
+  → module.network.aws_subnet.public[*]    ← 전부
+  → module.network.aws_nat_gateway.nat[*]  ← 하나의
+  → module.network.aws_route_table.public  ← Plan으로 동시 생성
+```
+
+`modules/network/`가 아무리 여러 파일로 나뉘어 있어도, `envs/dev/network/`에서 `terraform apply`를 실행하면 **모든 리소스가 하나의 Plan으로 묶여서 동시에 처리**된다. 모듈은 코드를 파일로 나눈 것이고, 실행 단위는 `terraform apply`를 어느 폴더에서 실행하느냐로 결정된다.
+
+**모듈을 분리하는 진짜 이유는 재사용이다.**
+`modules/network/`를 한 번 잘 만들어두면 `envs/dev/`와 `envs/prod/` 양쪽이 같은 코드를 공유한다. 수정이 필요하면 한 곳만 고쳐도 양쪽에 반영된다.
+
+### State 분리 = 진짜 "각각 생성"
+
+레이어별로 별도 폴더에서 `terraform apply`를 실행하는 것이 진짜 독립 실행이다.
+
+```
+envs/dev/1-network/   → terraform apply  (State 파일 1)
+envs/dev/2-security/  → terraform apply  (State 파일 2)
+envs/dev/3-web/       → terraform apply  (State 파일 3)
+```
+
+각 폴더는 독립된 State를 가지므로 ALB 설정만 바꿀 때 VPC, RDS는 전혀 건드리지 않는다.
+
+| 개념 | 목적 | 실행 단위 |
+|------|------|---------|
+| 모듈 분리 | 코드 재사용 | 영향 없음 — 같은 apply로 전부 생성 |
+| State 분리 | 변경 범위 격리 | 레이어마다 독립 apply |
+
+---
+
 ## 관련 개념
 - Provider Inheritance: https://developer.hashicorp.com/terraform/language/modules/develop/providers
 - Terraform Style Guide: https://developer.hashicorp.com/terraform/language/style
-- 검색 키워드: `terraform module provider inheritance`, `terraform module file structure`
+- 검색 키워드: `terraform module provider inheritance`, `terraform module file structure`, `terraform state separation layers`

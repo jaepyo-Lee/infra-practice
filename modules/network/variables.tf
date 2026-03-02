@@ -1,4 +1,4 @@
-# modules/vpc/variables.tf
+# modules/network/variables.tf
 # 이 모듈이 외부에서 받는 입력값(인터페이스)을 선언합니다.
 # type, description은 모듈 사용자가 올바른 값을 전달하도록 항상 명시해야 합니다.
 # 이유: description이 없으면 `terraform-docs` 같은 문서화 도구가 동작하지 않고,
@@ -26,7 +26,6 @@ variable "tags" {
   # 호출부에서 tags를 전달하면 main.tf의 merge()를 통해 Name 태그와 합산됩니다.
 }
 
-
 variable "public_subnet_cidrs" {
   type        = map(string)
   description = "Public Subnet { AZ => CIDR } 맵. for_each의 키가 AZ 이름이 되어 순서 변경에 안전하다 (예: {\"ap-northeast-2a\" = \"10.0.1.0/24\"})"
@@ -41,3 +40,10 @@ variable "private_full_subnet_cidrs" {
   type        = map(string)
   description = "Private Full Subnet { AZ => CIDR } 맵. 인터넷 접근이 완전히 차단된 DB 전용 서브넷. VPC 내부 통신만 허용 (예: {\"ap-northeast-2a\" = \"10.0.21.0/24\"})"
 }
+
+# ✅ route_table_subnet, route_table_destination_route 변수 제거
+# ❌ 이전 문제: Route Table을 "서브넷 목록을 외부에서 받아 처리"하는 방식으로 설계했습니다.
+# 이 방식은 Route Table이 어떤 서브넷에 붙는지 모듈 외부에서 관리해야 해서 복잡도가 높아집니다.
+# ✅ 올바른 방향: Route Table은 모듈 내부의 aws_subnet 리소스를 직접 for_each로 순회합니다.
+# 예: for_each = aws_subnet.public → 모듈이 만든 서브넷과 RT를 내부에서 직접 연결합니다.
+# 모듈 경계(인터페이스)는 "서브넷 CIDR 맵"까지만이고, RT 연결은 모듈 내부 구현 사항입니다.

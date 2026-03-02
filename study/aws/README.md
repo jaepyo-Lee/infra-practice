@@ -4,3 +4,9 @@
 |------|------|-------|----------------|
 | EC2 (Elastic Compute Cloud) | [ec2.md](./ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
 | VPC (Virtual Private Cloud) | [vpc.md](./vpc.md) | Phase 1 — Network Foundation | 2026-02-28 |
+| Subnet | [subnet.md](./subnet.md) | Phase 1 — Network Foundation | 2026-03-01 |
+| Internet Gateway (IGW) | [igw.md](./igw.md) | Phase 1 — Network Foundation | 2026-03-01 |
+| Route Table | [route-table.md](./route-table.md) | Phase 1 — Network Foundation | 2026-03-01 |
+| NAT Gateway | [nat-gateway.md](./nat-gateway.md) | Phase 1 — Network Foundation | 2026-03-01 |
+| ALB (Application Load Balancer) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-01 |
+| AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

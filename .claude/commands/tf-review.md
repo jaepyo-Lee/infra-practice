@@ -348,6 +348,21 @@ README.md 하단의 "진행 현황" 테이블을 실제 구현 상태로 갱신�
 - `dynamodb_table`을 반드시 설정한다 (State Lock 없으면 동시 apply 위험)
 - `key` 경로는 `{환경}/{스택}/terraform.tfstate` 형태로 환경/스택별 분리한다
 
+**Route Table 패턴**
+- Route Table은 반드시 3종으로 분리한다: public-rt × 1 / private-nat-rt × AZ별 / private-full-rt × 1
+- public-rt의 route: `gateway_id = aws_internet_gateway.xxx.id` (IGW로 전달)
+- private-nat-rt의 route: `nat_gateway_id = aws_nat_gateway.xxx[each.key].id` (NAT GW로 전달)
+  - **흔한 실수**: private-nat-rt에 `gateway_id = IGW`를 넣으면 Public IP 없는 EC2 패킷을 IGW가 처리하지 못해 아웃바운드 차단됨
+- private-full-rt: `route` 블록 없음 = 인터넷 완전 차단 (VPC local 경로만 존재)
+- `aws_route_table_association`으로 서브넷에 명시적 연결 필수 — 없으면 Default RT 사용
+
+**for_each 리소스 참조 패턴**
+- `for_each`로 만든 리소스는 맵(map)이므로 `.id`를 직접 참조할 수 없다
+  - `aws_subnet.public.id` → ❌ 에러 (맵 전체를 단일 리소스처럼 참조)
+  - `aws_subnet.public["ap-northeast-2a"].id` → ✅ (키로 특정 인스턴스 참조)
+  - `each.value.id` → ✅ (for_each 블록 안에서 현재 순회 중인 인스턴스 참조)
+- EIP와 NAT GW를 같은 키(AZ 이름)로 for_each하면 `aws_eip.nat[each.key].id`로 1:1 연결 가능
+
 ### 수정 결과 출력 형식
 
 ```

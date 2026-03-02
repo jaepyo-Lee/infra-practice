@@ -381,9 +381,188 @@ for_each = { application = "10.0.0.0/16" }
 
 ---
 
+### ⚠️ for_each 리소스 참조 안티패턴 — `.id` 직접 참조 불가
+
+`for_each`로 만든 리소스는 내부적으로 **맵(map)** 으로 관리된다. 단일 리소스처럼 `.id`를 직접 참조하면 에러가 발생한다.
+
+```hcl
+# ❌ 안티패턴: for_each 리소스를 단일 리소스처럼 참조
+resource "aws_nat_gateway" "nat" {
+  subnet_id = aws_subnet.public.id
+  # 에러: aws_subnet.public은 맵이므로 .id 속성이 없다
+}
+```
+
+**올바른 참조 방법 2가지:**
+
+**1. for_each 블록 내부 — `each.value.id`**
+
+```hcl
+resource "aws_nat_gateway" "nat" {
+  for_each  = aws_subnet.public
+  subnet_id = each.value.id  # 현재 순회 중인 서브넷의 ID
+}
+```
+
+**2. for_each 블록 외부 — `["키"].id`**
+
+```hcl
+# 특정 AZ의 서브넷 ID를 명시적으로 참조
+subnet_id = aws_subnet.public["ap-northeast-2a"].id
+```
+
+**같은 키로 두 리소스를 1:1 연결하는 패턴:**
+
+EIP와 NAT GW를 `aws_subnet.public`으로 동일하게 for_each하면, 같은 AZ 키로 서로를 참조할 수 있다.
+
+```hcl
+resource "aws_eip" "nat" {
+  for_each = aws_subnet.public  # 키: "ap-northeast-2a", "ap-northeast-2c"
+  domain   = "vpc"
+}
+
+resource "aws_nat_gateway" "nat" {
+  for_each      = aws_subnet.public
+  allocation_id = aws_eip.nat[each.key].id  # 같은 AZ 키로 EIP 참조
+  subnet_id     = each.value.id
+}
+```
+
+`each.key`가 동일한 맵을 순회하므로 AZ별 1:1 매핑이 자동으로 성립한다.
+
+---
+
 ## 참고 문서
 - Variables: https://developer.hashicorp.com/terraform/language/values/variables
 - Outputs: https://developer.hashicorp.com/terraform/language/values/outputs
 - Modules: https://developer.hashicorp.com/terraform/language/modules
 - for_each: https://developer.hashicorp.com/terraform/language/meta-arguments/for_each
 - 검색 키워드: `terraform module input output`, `terraform for_each module`, `terraform module scope`
+
+---
+
+## 11. AWS 리소스별 핵심 파라미터 — Phase 1 Network
+
+> 각 리소스를 Terraform으로 생성할 때 쓰는 인수(argument)의 의미와 필요성 설명.
+
+---
+
+### `aws_internet_gateway`
+
+```hcl
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "main-igw" }
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `vpc_id` | ✅ | 이 IGW를 연결할 VPC | 에러 — IGW는 반드시 VPC에 attach |
+| `tags` | 선택 | AWS 리소스 태그 | 태그 없음. Name 없으면 콘솔에서 식별 어려움 |
+
+**핵심**: IGW는 파라미터가 거의 없다. `vpc_id`만 있으면 된다. 복잡한 건 Route Table에서 한다.
+
+---
+
+### `aws_route_table`
+
+```hcl
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = { Name = "public-rt" }
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `vpc_id` | ✅ | 이 Route Table이 속할 VPC | 에러 |
+| `route.cidr_block` | ✅ (route 블록 내) | 이 경로의 목적지 CIDR | 에러 |
+| `route.gateway_id` | 선택 | 패킷을 보낼 IGW ID | 경로 없음 (대신 nat_gateway_id 등 사용) |
+| `route.nat_gateway_id` | 선택 | 패킷을 보낼 NAT GW ID | Private 서브넷 아웃바운드 불가 |
+| `tags` | 선택 | 태그 | - |
+
+**`route` 블록**: 인라인으로 여러 경로를 선언할 수 있다. 단, 인라인 `route`와 별도 `aws_route` 리소스를 혼용하면 충돌 위험 — 한 가지 방식만 사용한다.
+
+**`0.0.0.0/0`의 의미**: "나머지 모든 목적지". 더 구체적인 경로(`10.0.0.0/16 → local`)가 먼저 매칭되고, 아무것도 안 맞으면 이 경로로 폴백.
+
+---
+
+### `aws_route_table_association`
+
+```hcl
+resource "aws_route_table_association" "public" {
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.public.id
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `subnet_id` | ✅ | 연결할 서브넷 ID | 에러 |
+| `route_table_id` | ✅ | 연결할 Route Table ID | 에러 |
+
+**왜 별도 리소스인가**: Route Table을 만든다고 서브넷에 자동으로 붙지 않는다. 명시적 연결이 없으면 서브넷은 VPC Default Route Table을 사용한다. Default RT에 실수로 IGW 경로를 추가하면 모든 서브넷이 Public이 되는 보안 사고 발생.
+
+---
+
+### `aws_eip`
+
+```hcl
+resource "aws_eip" "nat" {
+  for_each = { for az, _ in var.public_subnets : az => az }
+  domain   = "vpc"
+
+  depends_on = [aws_internet_gateway.main]
+  tags       = { Name = "nat-eip-${each.key}" }
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `domain` | ✅ | `"vpc"` 고정 | 구 API 방식 deprecated. vpc 스코프 EIP로 명시 |
+| `depends_on` | 권장 | IGW가 먼저 있어야 EIP가 라우팅 가능 | 간헐적 생성 실패 또는 라우팅 오류 |
+| `tags` | 선택 | 태그 | - |
+
+**`domain = "vpc"` 왜 필요한가**: AWS에는 과거 EC2-Classic(2006~2022, 모든 고객이 공유하는 플랫 네트워크)과 EC2-VPC(현재, 격리된 가상 네트워크) 두 플랫폼이 있었다. EIP도 플랫폼별로 별도 생성이 필요했고 `domain`이 그 구분자였다. EC2-Classic은 2022년 8월 완전 종료됐으므로 지금은 `"vpc"`만 유효하다. 생략하면 deprecated 경고 또는 에러 발생.
+
+**EIP는 독립적으로 존재한다**: NAT GW를 삭제해도 EIP는 남는다. 연결 안 된 EIP는 비용이 발생하므로 NAT GW 삭제 시 EIP도 반드시 함께 삭제해야 한다.
+
+---
+
+### `aws_nat_gateway`
+
+```hcl
+resource "aws_nat_gateway" "main" {
+  for_each = aws_subnet.public
+
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id     = each.value.id
+  connectivity_type = "public"
+
+  depends_on = [aws_internet_gateway.main]
+  tags       = { Name = "nat-gw-${each.key}" }
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `allocation_id` | ✅ (public type) | NAT GW에 할당할 EIP ID | 에러. Public NAT GW는 고정 IP 필수 |
+| `subnet_id` | ✅ | NAT GW를 배치할 서브넷 ID | 에러 |
+| `connectivity_type` | 선택 | `"public"` (기본) 또는 `"private"` | 기본값 `"public"` 적용 |
+| `depends_on` | 권장 | IGW가 먼저 있어야 인터넷 통신 가능 | 생성은 되지만 트래픽 흐름 불가 |
+| `tags` | 선택 | 태그 | - |
+
+**`subnet_id`는 Public Subnet을 가리켜야 한다**: NAT GW가 인터넷에 접근하려면 IGW로 향하는 Route가 있는 Public Subnet에 위치해야 한다. Private Subnet에 두면 인터넷과 통신 불가.
+
+**`connectivity_type = "private"`**: VPC 간 통신(Transit Gateway 등)을 위한 Private NAT GW. EIP 불필요. 일반적인 학습 환경에서는 쓰지 않는다.
+
+**`depends_on`이 필요한 이유**: Terraform은 `aws_eip`와 `aws_nat_gateway`가 독립적으로 생성 가능하다고 판단해 병렬로 실행할 수 있다. 하지만 IGW가 VPC에 attach되지 않은 상태에서 Public IP를 가진 NAT GW가 만들어지면 라우팅이 불안정하다. `depends_on`으로 IGW attach 완료 후 NAT GW를 생성하도록 순서를 명시한다.
