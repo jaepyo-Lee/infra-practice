@@ -107,7 +107,11 @@
 1. 대화에서 기록할 주제 목록을 식별한다
 2. 해당 `study/` 파일을 Read 툴로 읽어 현재 내용을 파악한다
 3. 중복 없이 새 내용을 Edit/Write 툴로 직접 추가한다 (learn 스킬 호출 없이)
-4. 새 파일 생성 시 README에도 항목을 추가한다
+4. **README 동기화 (필수 — 생략 불가)**
+   - Glob으로 `study/aws/*.md`, `study/terraform/*.md` 전체 파일 목록을 탐색한다
+   - `study/README.md`, `study/aws/README.md`, `study/terraform/README.md` 세 파일을 모두 읽는다
+   - README에 없는 파일이 있으면 **즉시 추가**한다 (새 파일 생성 여부와 무관하게 매번 확인)
+   - 세 README 모두 일치하는지 검증한 뒤 수정을 완료한다
 
 #### 판단 기준
 
