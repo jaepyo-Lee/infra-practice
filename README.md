@@ -81,7 +81,6 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 - [x] Internet Gateway 연결
 - [x] NAT Gateway (AZ별 HA 구성)
 - [x] Route Table 설계 및 서브넷 연결
-- [ ] VPC Flow Logs 활성화
 
 **체크포인트:** Public 서브넷의 EC2는 인터넷 접근이 되고, Private 서브넷의 EC2는 NAT를 통해서만 아웃바운드가 가능한가?
 
@@ -275,7 +274,7 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| Phase 1 | Network Foundation | 🔄 진행중 (5/6) |
+| Phase 1 | Network Foundation | ✅ 완료 |
 | Phase 2 | Security Layer | 🔲 미시작 |
 | Phase 3 | Web Tier | 🔲 미시작 |
 | Phase 4 | Application Tier | 🔲 미시작 |
