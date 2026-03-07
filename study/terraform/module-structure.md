@@ -3,7 +3,7 @@
 > **이 파일의 범위**: 파일/폴더 구조 컨벤션, provider 위치 규칙, 모듈별 outputs 목록
 > **개념 및 데이터 흐름**: [core-blocks.md](./core-blocks.md) 참고
 
-마지막 업데이트: 2026-03-02
+마지막 업데이트: 2026-03-07
 
 ---
 
@@ -24,7 +24,7 @@ Terraform 모듈은 단일 `main.tf`에 모든 것을 담지 않고, **역할별
 
 ### 안티패턴
 ```hcl
-# ❌ main.tf 안에 variable 선언 섞기
+# ❌ iam.tf 안에 variable 선언 섞기
 resource "aws_vpc" "main" { ... }
 
 variable "cidr" {       # ← main.tf에 넣으면 안 됨
@@ -157,6 +157,62 @@ envs/dev/3-web/       → terraform apply  (State 파일 3)
 |------|------|---------|
 | 모듈 분리 | 코드 재사용 | 영향 없음 — 같은 apply로 전부 생성 |
 | State 분리 | 변경 범위 격리 | 레이어마다 독립 apply |
+
+---
+
+## 6. 모듈 인터페이스 설계 — 처음부터 컬렉션으로
+
+모듈 변수는 **모듈의 public API**다. 한 번 여러 root module이 참조하기 시작하면, 타입 변경은 곧 breaking change가 된다.
+
+```
+modules/security/
+    └── variables.tf  ← API 명세서
+
+envs/dev/security/   ← API 호출자
+envs/prod/security/  ← API 호출자
+```
+
+`var.sg_name = string` → `var.sg = map(object)` 로 바꾸면 모든 호출자를 동시에 수정해야 한다.
+
+### 원칙: 복수 가능성이 있다면 처음부터 컬렉션으로
+
+```hcl
+# ❌ 나중에 여러 개가 필요해지면 breaking change
+variable "iam_role_name" {
+  type = string
+}
+
+# ✅ 처음부터 map으로 — 호출자는 항목 하나만 넘기면 됨
+variable "iam_roles" {
+  type = map(object({
+    name = string
+  }))
+}
+```
+
+이 프로젝트에서 SG를 처음부터 `map(object)`로 설계한 것이 올바른 선택이었던 이유다.
+
+### non-breaking 확장: optional() 활용
+
+타입 자체를 바꾸지 않고, 기존 object에 선택 필드를 추가하는 방식으로 확장한다. Terraform 1.3+에서 지원.
+
+```hcl
+variable "iam_roles" {
+  type = map(object({
+    name        = string
+    description = optional(string, null)  # 기존 호출자는 수정 불필요
+  }))
+}
+```
+
+### 모듈 인터페이스 설계 판단 기준
+
+| 상황 | 권장 대응 |
+|------|-----------|
+| 처음 설계 시, 복수 가능성 있음 | 처음부터 `map(object)` |
+| 필드 추가 필요 | `optional()` 로 non-breaking 확장 |
+| 타입 자체를 바꿔야 함 | 불가피한 breaking change → 모든 호출자 동시 수정 |
+| 모듈이 너무 비대해짐 | 별도 모듈로 분리 검토 |
 
 ---
 

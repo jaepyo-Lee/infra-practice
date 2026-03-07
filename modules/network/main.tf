@@ -1,4 +1,4 @@
-# modules/network/main.tf
+# modules/network/iam.tf
 # VPC 모듈의 핵심 리소스만 정의합니다.
 # variable, output은 각각 variables.tf, outputs.tf로 분리하는 것이 Terraform 컨벤션입니다.
 # 이유: 파일 역할이 명확해져 팀 협업과 유지보수가 쉬워집니다.

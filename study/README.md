@@ -24,6 +24,8 @@ study/
 | Route Table | [aws/route-table.md](./aws/route-table.md) | Phase 1 — Network Foundation | 2026-03-01 |
 | Security Group | [aws/security-group.md](./aws/security-group.md) | Phase 2 — Security Layer | 2026-03-07 |
 | NACL (Network Access Control List) | [aws/nacl.md](./aws/nacl.md) | Phase 2 — Security Layer | 2026-03-07 |
+| IAM (Identity and Access Management) | [aws/iam.md](./aws/iam.md) | Phase 2 — Security Layer | 2026-03-07 |
+| Secrets Manager | [aws/secrets-manager.md](./aws/secrets-manager.md) | Phase 2 — Security Layer | 2026-03-07 |
 | ALB (Application Load Balancer) | [aws/alb.md](./aws/alb.md) | Phase 3 — Web Tier | 2026-03-01 |
 | EC2 (Elastic Compute Cloud) | [aws/ec2.md](./aws/ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
 | ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-02 |

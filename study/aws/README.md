@@ -11,5 +11,7 @@
 | NAT Gateway | [nat-gateway.md](./nat-gateway.md) | Phase 1 — Network Foundation | 2026-03-01 |
 | Security Group | [security-group.md](./security-group.md) | Phase 2 — Security Layer | 2026-03-02 |
 | NACL (Network Access Control List) | [nacl.md](./nacl.md) | Phase 2 — Security Layer | 2026-03-07 |
+| IAM (Identity and Access Management) | [iam.md](./iam.md) | Phase 2 — Security Layer | 2026-03-07 |
+| Secrets Manager | [secrets-manager.md](./secrets-manager.md) | Phase 2 — Security Layer | 2026-03-07 |
 | ALB (Application Load Balancer) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-01 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

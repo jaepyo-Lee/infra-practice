@@ -1,6 +1,6 @@
 # Terraform 핵심 블록: resource, variable, output, module
 
-마지막 업데이트: 2026-03-01 (each.key/each.value 설명 추가)
+마지막 업데이트: 2026-03-07 (Phase 2 IAM 리소스 패턴 추가)
 
 ---
 
@@ -49,7 +49,7 @@ variable "cidr" {
 모듈 내부에서는 `var.변수명`으로 참조:
 
 ```hcl
-# main.tf
+# iam.tf
 resource "aws_vpc" "main" {
   cidr_block = var.cidr  # 외부에서 주입된 값 사용
 }
@@ -104,7 +104,7 @@ module.vpc.public_subnet_ids
 재사용 가능한 모듈을 불러와 사용하는 블록. 함수 호출과 동일한 구조.
 
 ```hcl
-# envs/dev/main.tf
+# envs/dev/iam.tf
 module "vpc" {
   source = "../../modules/vpc"  # 모듈 경로 (필수)
 
@@ -566,3 +566,234 @@ resource "aws_nat_gateway" "main" {
 **`connectivity_type = "private"`**: VPC 간 통신(Transit Gateway 등)을 위한 Private NAT GW. EIP 불필요. 일반적인 학습 환경에서는 쓰지 않는다.
 
 **`depends_on`이 필요한 이유**: Terraform은 `aws_eip`와 `aws_nat_gateway`가 독립적으로 생성 가능하다고 판단해 병렬로 실행할 수 있다. 하지만 IGW가 VPC에 attach되지 않은 상태에서 Public IP를 가진 NAT GW가 만들어지면 라우팅이 불안정하다. `depends_on`으로 IGW attach 완료 후 NAT GW를 생성하도록 순서를 명시한다.
+
+---
+
+## 12. AWS 리소스별 핵심 파라미터 — Phase 2 Security (IAM)
+
+---
+
+### `aws_iam_role`
+
+IAM Role의 핵심은 두 가지 정책이다: **누가 이 Role을 쓸 수 있는가(Trust Policy)** 와 **이 Role로 무엇을 할 수 있는가(Permission Policy)** 다.
+
+```hcl
+resource "aws_iam_role" "app" {
+  name = "app-ec2-role"
+
+  # Trust Policy: "ec2.amazonaws.com이 이 Role을 assume할 수 있다"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = { Name = "app-ec2-role" }
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `name` | ✅ | Role 이름. AWS 계정 내 유일해야 함 | 에러 |
+| `assume_role_policy` | ✅ | Trust Policy JSON 문자열. 누가 이 Role을 assume할 수 있는지 정의 | 에러 |
+| `tags` | 선택 | 태그 | - |
+
+**`assume_role_policy`는 `jsonencode()` 또는 `data "aws_iam_policy_document"` 로 작성한다.**
+
+`jsonencode()` 방식:
+```hcl
+assume_role_policy = jsonencode({
+  Version = "2012-10-17"
+  Statement = [{
+    Effect    = "Allow"
+    Principal = { Service = "ec2.amazonaws.com" }
+    Action    = "sts:AssumeRole"
+  }]
+})
+```
+
+`data "aws_iam_policy_document"` 방식 (권장):
+```hcl
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "app" {
+  name               = "app-ec2-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+```
+
+**`Principal`의 형태**: EC2 외 다른 서비스를 허용할 때 `Service` 값을 바꾼다.
+- EC2: `"ec2.amazonaws.com"`
+- Lambda: `"lambda.amazonaws.com"`
+- ECS Task: `"ecs-tasks.amazonaws.com"`
+
+---
+
+### `aws_iam_policy`
+
+```hcl
+data "aws_iam_policy_document" "app_permissions" {
+  # statement 1: Secrets Manager 읽기
+  statement {
+    sid     = "SecretsManagerRead"
+    effect  = "Allow"
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = ["*"]  # 실무에서는 ARN으로 범위 좁히기
+  }
+
+  # statement 2: CloudWatch 로그 쓰기
+  statement {
+    sid    = "CloudWatchLogs"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "app" {
+  name        = "app-ec2-policy"
+  description = "App EC2 인스턴스용 권한"
+  policy      = data.aws_iam_policy_document.app_permissions.json
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `name` | ✅ | Policy 이름. AWS 계정 내 유일해야 함 | 에러 |
+| `policy` | ✅ | Permission Policy JSON 문자열 | 에러 |
+| `description` | 선택 | Policy 설명. 나중에 콘솔에서 식별용 | - |
+
+**`sid` (Statement ID)**: 각 statement에 붙이는 이름. 선택사항이지만 달아두면 어떤 권한인지 바로 알 수 있다.
+
+---
+
+### `aws_iam_role_policy_attachment`
+
+Role과 Policy를 연결하는 리소스. Role을 만들고, Policy를 만들고, 이 리소스로 둘을 연결한다.
+
+```hcl
+resource "aws_iam_role_policy_attachment" "app" {
+  role       = aws_iam_role.app.name
+  policy_arn = aws_iam_policy.app.arn
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `role` | ✅ | Role 이름 (name 속성, ARN이 아님) | 에러 |
+| `policy_arn` | ✅ | Policy ARN | 에러 |
+
+**AWS Managed Policy를 붙일 때**: ARN을 직접 작성한다.
+```hcl
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = aws_iam_role.app.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+```
+
+**같은 Role에 Policy 여러 개**: `aws_iam_role_policy_attachment` 블록을 여러 개 만들면 된다.
+```hcl
+resource "aws_iam_role_policy_attachment" "custom" {
+  role       = aws_iam_role.app.name
+  policy_arn = aws_iam_policy.app.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.app.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+```
+
+---
+
+### `aws_iam_instance_profile`
+
+EC2에 Role을 붙이기 위한 래퍼. EC2는 Role을 직접 참조하지 못하고 Instance Profile을 통해 참조한다.
+
+```hcl
+resource "aws_iam_instance_profile" "app" {
+  name = "app-ec2-instance-profile"
+  role = aws_iam_role.app.name
+}
+```
+
+| 파라미터 | 필수 | 의미 | 없으면? |
+|---------|------|------|---------|
+| `name` | ✅ | Instance Profile 이름 | 에러 |
+| `role` | ✅ | 연결할 IAM Role 이름 | 에러 |
+
+**EC2 Launch Template에서의 참조**:
+```hcl
+resource "aws_launch_template" "app" {
+  # ...
+  iam_instance_profile {
+    name = aws_iam_instance_profile.app.name
+  }
+}
+```
+
+---
+
+### 전체 흐름 요약
+
+```
+[data] aws_iam_policy_document "assume_role"
+    ↓ .json
+[resource] aws_iam_role "app"          (Trust Policy: EC2가 assume 가능)
+    ↓ .name
+[resource] aws_iam_role_policy_attachment  (Role ↔ Policy 연결)
+    ↑ .arn
+[resource] aws_iam_policy "app"        (Permission: Secrets Manager 읽기 등)
+    ↑ data.aws_iam_policy_document "app_permissions" .json
+
+[resource] aws_iam_instance_profile "app"
+    → aws_iam_role.app.name
+    → Launch Template의 iam_instance_profile.name 으로 참조
+```
+
+**생성 순서** (Terraform이 자동으로 결정):
+1. `aws_iam_role` + `aws_iam_policy` (병렬 생성)
+2. `aws_iam_role_policy_attachment` (둘 다 완료 후)
+3. `aws_iam_instance_profile` (role 완료 후)
+
+---
+
+### 실수하기 쉬운 것
+
+**1. `role`에 ARN 대신 name을 써야 한다**
+```hcl
+# ❌ ARN을 넣으면 에러
+role = aws_iam_role.app.arn
+
+# ✅ name을 넣어야 함
+role = aws_iam_role.app.name
+```
+
+**2. `data "aws_iam_policy_document"` 는 리소스를 생성하지 않는다**
+
+`apply`해도 AWS에 아무것도 만들지 않는다. 단순히 JSON 문자열을 계산하는 데이터 소스다. `.json` 속성으로 결과를 꺼내 쓴다.
+
+**3. Permission Policy와 Trust Policy를 혼동**
+
+| | 어디에 쓰는가 | 무엇을 정의하는가 |
+|--|-------------|----------------|
+| Trust Policy | `aws_iam_role.assume_role_policy` | 누가 이 Role을 assume할 수 있는가 |
+| Permission Policy | `aws_iam_policy.policy` | 이 Role로 무엇을 할 수 있는가 |
+
+Trust Policy 없이 Role만 만들면 아무도 그 Role을 쓸 수 없다. Permission Policy 없이 Role만 assume할 수 있어도 실제로 할 수 있는 것이 없다.

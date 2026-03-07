@@ -225,7 +225,7 @@ terraform-practice/
 각 레이어는 독립된 State를 가지므로, 상위 레이어의 출력값은 `terraform_remote_state`로 참조한다.
 
 ```hcl
-# envs/dev/4-app/main.tf 예시
+# envs/dev/4-app/iam.tf 예시
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {

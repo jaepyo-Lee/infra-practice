@@ -1,4 +1,4 @@
-# envs/dev/vpc/main.tf
+# envs/dev/vpc/iam.tf
 # dev 환경의 VPC 스택 진입점입니다.
 # 이 파일에는 terraform 설정, provider, module 호출만 포함합니다.
 # 이유: 리소스를 직접 여기에 쓰면 모듈화의 이점(재사용, 환경 분리)이 사라집니다.
@@ -44,7 +44,7 @@ locals {
 
 module "main" {
   source = "../../../modules/network"
-  # source는 디렉토리 경로를 가리킵니다. 파일(main.tf)이 아닙니다.
+  # source는 디렉토리 경로를 가리킵니다. 파일(iam.tf)이 아닙니다.
   # Terraform은 해당 디렉토리의 모든 .tf 파일을 자동으로 로드합니다.
   name = var.name
   cidr = var.cidr
