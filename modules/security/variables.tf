@@ -68,6 +68,24 @@ variable "secret_manager_meta" {
   description = "생성할 secret manager목록."
 }
 
+variable "s3_buckets" {
+  type = map(object({
+    bucket_name   = string
+    force_destroy = optional(bool, false)
+
+    # Public Access Block — 기본값 전부 true (보안 기본값)
+    block_public_acls       = optional(bool, true)
+    ignore_public_acls      = optional(bool, true)
+    block_public_policy     = optional(bool, true)
+    restrict_public_buckets = optional(bool, true)
+
+    # 버킷 정책 JSON — null이면 정책 미생성
+    bucket_policy_json = optional(string, null)
+  }))
+  description = "생성할 S3 버킷 목록. default={}이면 생성하지 않음"
+  default     = {}
+}
+
 variable "acm" {
   type = map(object({
     domain_name               = string
