@@ -1,6 +1,6 @@
 # ECS (Elastic Container Service)
 
-> 마지막 업데이트: 2026-03-02
+> 마지막 업데이트: 2026-03-07 (Capacity Provider, ECS Auto Scaling, ECS Exec, CI/CD lifecycle 패턴 추가)
 
 ---
 
@@ -136,6 +136,343 @@ Task Role이 없으면 앱에서 AWS SDK로 S3, Secrets Manager 등에 접근할
 3. **ALB Target Group을 Instance mode로** → Fargate는 반드시 IP mode 사용
 4. **ECR VPC Endpoint 없이 Fargate 사용** → NAT 비용 과다 발생
 5. **컨테이너 로그 설정 누락** → CloudWatch Logs 연결 안 하면 장애 원인 파악 불가
+
+---
+
+---
+
+## 1-B. 실무 심화 패턴 (실무 코드 분석)
+
+### Capacity Provider — Fargate + EC2 혼합 전략
+
+Capacity Provider는 ECS Task를 어디서 실행할지 결정하는 전략이다.
+실무에서는 FARGATE / FARGATE_SPOT / EC2를 혼합해 비용과 안정성을 균형있게 맞춘다.
+
+```
+FARGATE      → 안정적, 비쌈 (On-Demand)
+FARGATE_SPOT → 저렴하지만 중단 가능 (중단 허용 가능한 batch 작업에 적합)
+EC2          → 서버 직접 관리, 가장 저렴 (대용량 트래픽 시)
+```
+
+**Cluster에서 Capacity Provider 등록:**
+```hcl
+resource "aws_ecs_cluster_capacity_providers" "this" {
+  cluster_name = aws_ecs_cluster.this.name
+
+  capacity_providers = ["FARGATE", "FARGATE_SPOT", aws_ecs_capacity_provider.ec2.name]
+
+  # 기본 전략: Prod는 안정성 우선 FARGATE
+  default_capacity_provider_strategy {
+    capacity_provider = "FARGATE"
+    weight            = 1
+    base              = 1
+  }
+}
+```
+
+**Service에서 Capacity Provider 선택:**
+```hcl
+resource "aws_ecs_service" "this" {
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE"  # 이 서비스는 FARGATE 고정
+    weight            = 1
+    base              = 1
+  }
+}
+```
+
+**EC2 Capacity Provider 구성 (ECS-managed Auto Scaling):**
+
+EC2 인스턴스를 ASG로 관리하면서 ECS가 직접 스케일링하는 방식.
+
+```
+ECS Task 요청 증가
+    ↓
+ECS Capacity Provider가 ASG에게 "인스턴스 더 줘"
+    ↓
+ASG가 EC2 인스턴스 추가
+    ↓
+ECS Task 배치
+```
+
+```hcl
+resource "aws_ecs_capacity_provider" "ec2" {
+  name = "my-ec2-capacity-provider"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn         = aws_autoscaling_group.ecs_ec2.arn
+    managed_termination_protection = "ENABLED"  # ECS Task 실행 중 인스턴스 종료 방지
+
+    managed_scaling {
+      status                    = "ENABLED"
+      target_capacity           = 100  # 인스턴스 용량의 100%까지 사용
+      maximum_scaling_step_size = 2    # 한 번에 최대 2개 추가
+      minimum_scaling_step_size = 1    # 한 번에 최소 1개 추가
+    }
+  }
+}
+```
+
+**mixed_instances_policy — r6i.large로 실제 운영:**
+
+Launch Template에 기본 인스턴스 타입을 지정하고, ASG에서 다른 타입으로 override하는 패턴.
+
+```hcl
+resource "aws_autoscaling_group" "ecs_ec2" {
+  mixed_instances_policy {
+    launch_template {
+      launch_template_specification {
+        launch_template_id = aws_launch_template.ecs_ec2.id
+        version            = "$Latest"
+      }
+
+      # Launch Template의 t3.medium을 r6i.large로 override
+      override {
+        instance_type = "r6i.large"
+      }
+    }
+
+    instances_distribution {
+      on_demand_percentage_above_base_capacity = 100  # 100% On-Demand (Spot 없음)
+    }
+  }
+
+  protect_from_scale_in = true  # Capacity Provider의 managed termination protection과 함께 사용
+}
+```
+
+**EC2 User Data — ECS 클러스터 등록:**
+```bash
+#!/bin/bash
+# 이 EC2가 어느 ECS 클러스터에 속하는지 알려줌
+echo "ECS_CLUSTER=my-cluster-name" >> /etc/ecs/ecs.config
+echo "ECS_ENABLE_CONTAINER_METADATA=true" >> /etc/ecs/ecs.config
+```
+
+---
+
+### ECS Application Auto Scaling
+
+ECS Service의 Task 수를 CPU/메모리 기준으로 자동으로 조정한다.
+
+```
+aws_appautoscaling_target   → "이 ECS 서비스의 Task 수를 1~6개 범위에서 조정"
+aws_appautoscaling_policy   → "CPU 40% 넘으면 늘려라"
+```
+
+```hcl
+resource "aws_appautoscaling_target" "this" {
+  max_capacity       = 6
+  min_capacity       = 2
+  resource_id        = "service/my-cluster/my-service"  # ECS 서비스 경로
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "cpu" {
+  name               = "cpu-scaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.this.resource_id
+  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.this.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value       = 40           # CPU 40% 목표
+    scale_in_cooldown  = 300          # 축소는 5분 쿨다운 (플래핑 방지)
+    scale_out_cooldown = 60           # 확장은 1분 쿨다운 (빠르게 대응)
+  }
+}
+```
+
+**Scale Out vs Scale In Cooldown 설계 원칙:**
+- Scale Out (확장): 빠르게 (60초) — 트래픽 급증에 즉각 대응
+- Scale In (축소): 느리게 (300초) — 트래픽이 잠깐 줄었다가 다시 오르면 불필요한 축소/확장 반복(플래핑) 발생
+
+**Prod 환경의 Auto Scaling 설정 (실무 기준):**
+```hcl
+min_capacity              = 2     # HA: 최소 2개 (AZ 분산)
+max_capacity              = 6
+autoscaling_cpu_target    = 40    # CPU 40% 목표 (여유 확보)
+autoscaling_memory_target = 80    # Memory 80% 목표
+scale_out_cooldown        = 60    # 확장은 빠르게
+scale_in_cooldown         = 300   # 축소는 천천히 (5분)
+```
+
+---
+
+### ECS Exec — 컨테이너에 직접 접속 (SSM)
+
+Fargate 컨테이너에는 SSH가 없다. ECS Exec는 SSM Session Manager를 통해 컨테이너 안에 쉘로 직접 접속하는 기능이다.
+
+```
+개발자 로컬
+    ↓
+AWS SSM Session Manager (인터넷)
+    ↓
+ECS Task (Private Subnet) ← VPC Endpoint 필요
+    ↓
+컨테이너 쉘 (bash)
+```
+
+**Terraform 설정:**
+```hcl
+resource "aws_ecs_service" "this" {
+  enable_execute_command = true  # ECS Exec 활성화
+}
+```
+
+**Task Role에 SSM 권한 필요:**
+```hcl
+resource "aws_iam_role_policy" "ecs_exec" {
+  policy = jsonencode({
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+```
+
+**실제 접속 명령 (AWS CLI):**
+```bash
+aws ecs execute-command \
+  --cluster my-cluster \
+  --task task-id \
+  --container container-name \
+  --command "/bin/bash" \
+  --interactive
+```
+
+**VPC Endpoint 필요:** Private Subnet에서 인터넷 없이 SSM을 사용하려면 SSM Interface Endpoint 3개 필요.
+- `com.amazonaws.{region}.ssm`
+- `com.amazonaws.{region}.ssmmessages`
+- `com.amazonaws.{region}.ec2messages`
+
+---
+
+### CI/CD와 Terraform의 역할 분리
+
+실무에서 ECS는 Terraform과 CI/CD(GitHub Actions 등)가 **동시에 관리**한다. 이 역할 분리를 이해하지 못하면 Terraform apply가 배포 내용을 덮어쓰는 문제가 생긴다.
+
+```
+Terraform이 관리:              CI/CD가 관리:
+─────────────────              ─────────────────
+Task Definition 기본 뼈대      새 Docker 이미지 → 새 Task Definition revision
+ECS Service 설정               Service를 새 revision으로 업데이트
+IAM Role, Security Group       desired_count (Auto Scaling)
+ALB, Target Group              container_definitions 실제 이미지 태그
+```
+
+**해결책: `ignore_changes`로 역할 명확히 분리**
+```hcl
+resource "aws_ecs_task_definition" "this" {
+  lifecycle {
+    ignore_changes = [container_definitions]  # CI/CD가 관리
+  }
+}
+
+resource "aws_ecs_service" "this" {
+  lifecycle {
+    ignore_changes = [
+      desired_count,       # Auto Scaling이 관리
+      task_definition,     # CI/CD가 관리 (새 revision으로 업데이트)
+    ]
+  }
+}
+```
+
+---
+
+### Deployment Circuit Breaker — 배포 실패 자동 롤백
+
+새 버전 배포 시 Health Check가 계속 실패하면 자동으로 이전 버전으로 롤백한다.
+
+```hcl
+resource "aws_ecs_service" "this" {
+  deployment_maximum_percent         = 200   # 배포 중 최대 200% Task 실행 허용
+  deployment_minimum_healthy_percent = 100   # 배포 중 최소 100% 정상 유지
+
+  deployment_circuit_breaker {
+    enable   = true   # Circuit Breaker 활성화
+    rollback = true   # 실패 시 자동 롤백
+  }
+}
+```
+
+**동작 흐름:**
+```
+새 Task Definition으로 배포 시작
+    ↓
+새 컨테이너가 Health Check 실패 반복
+    ↓
+Circuit Breaker 발동
+    ↓
+이전 Task Definition revision으로 자동 롤백
+    ↓
+서비스 정상 유지
+```
+
+**주의:** Circuit Breaker는 배포 자체 실패를 잡아내지만, 배포 후 운영 중 발생하는 장애는 잡지 못한다.
+
+---
+
+### GitHub OIDC — 비밀 키 없이 GitHub Actions에서 AWS 접근
+
+GitHub Actions에서 AWS에 접근할 때 Access Key를 저장하지 않고, OIDC 토큰으로 AssumeRole하는 방식.
+
+```
+GitHub Actions 실행
+    ↓
+GitHub이 JWT 토큰 발급 (OIDC)
+    ↓
+AWS IAM이 토큰 검증 (OIDC Provider)
+    ↓
+임시 자격 증명(AssumeRole) 반환
+    ↓
+ECR Push, ECS 배포
+```
+
+**Terraform 설정 (Global 레벨):**
+```hcl
+# OIDC Provider 생성 (계정당 한 번)
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+# GitHub Actions용 IAM Role
+resource "aws_iam_role" "github_actions" {
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.github.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:my-org/my-repo:*"
+        }
+      }
+    }]
+  })
+}
+```
+
+**최소 권한 원칙:** 서비스별로 ECR/ECS 권한을 분리해서 부여한다.
+- frontend용 ECR: `arn:aws:ecr:region:account:repository/project-prod-frontend`
+- backend용 ECR: `arn:aws:ecr:region:account:repository/project-prod-backend`
+- scheduler용 ECR: `arn:aws:ecr:region:account:repository/project-prod-scheduler-*` (wildcard)
 
 ---
 

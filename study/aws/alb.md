@@ -1,6 +1,6 @@
 # ALB (Application Load Balancer)
 
-> 마지막 업데이트: 2026-03-01
+> 마지막 업데이트: 2026-03-07
 
 ---
 
@@ -86,7 +86,109 @@ EC2 SG의 inbound source를 `0.0.0.0/0`이 아닌 **ALB SG ID**로 지정한다.
 
 ---
 
-## 2. Terraform 구현 참고
+## 2. Terraform 핵심 파라미터
+
+ALB를 만들려면 리소스 4개가 필요하다:
+
+```
+aws_lb                  ← ALB 본체
+aws_lb_target_group     ← 트래픽 전달 대상 그룹
+aws_lb_listener         ← 포트별 수신 설정
+aws_lb_listener_rule    ← 조건별 라우팅 규칙 (선택)
+```
+
+### `aws_alb` vs `aws_lb`
+
+`aws_alb`는 `aws_lb`의 **alias(별칭)** 다. 동작은 완전히 동일하지만 공식 문서 기준 `aws_lb`가 표준이다.
+`aws_alb_target_group`, `aws_alb_listener`도 마찬가지로 각각 `aws_lb_target_group`, `aws_lb_listener`가 표준이다.
+
+---
+
+### `aws_lb` — ALB 본체
+
+| 인수 | 필수 | 설명 |
+|------|------|------|
+| `name` | 선택 | ALB 이름. 최대 32자 |
+| `internal` | 선택 | `false` = 인터넷 facing (기본). `true` = 내부 전용 |
+| `load_balancer_type` | 선택 | `"application"` (기본). NLB는 `"network"` |
+| `subnets` | 필수 | ALB가 위치할 서브넷 ID 목록. **최소 2개 AZ 필수** |
+| `security_groups` | 필수 | 연결할 SG ID 목록 |
+| `enable_deletion_protection` | 선택 | `true`면 삭제 불가. 운영 환경에선 true |
+| `access_logs` | 선택 | S3 버킷에 접근 로그 저장 |
+
+> **실수 포인트**: `subnets`에 Private Subnet을 넣으면 인터넷에서 접근 불가. `internal = false`인 ALB는 반드시 Public Subnet에 위치해야 한다.
+
+### `aws_lb_target_group` — 대상 그룹
+
+| 인수 | 필수 | 설명 |
+|------|------|------|
+| `port` | 필수 | 대상이 수신하는 포트 (이 프로젝트는 8080) |
+| `protocol` | 필수 | `"HTTP"` 또는 `"HTTPS"` |
+| `vpc_id` | 필수 | 대상이 속한 VPC ID |
+| `target_type` | 선택 | `"instance"` (기본), `"ip"`, `"lambda"` |
+| `health_check` 블록 | 선택 | path, interval, threshold, matcher 등 |
+
+**target_type과 백엔드 종류:**
+
+| target_type | 사용 대상 | 등록 방식 |
+|-------------|-----------|-----------|
+| `"instance"` | EC2 (ASG) | 인스턴스 ID로 등록. ASG 연결 시 자동 등록/해제 |
+| `"ip"` | ECS Fargate, ECS EC2 | Task의 ENI IP로 등록. ECS Service가 자동 관리 |
+| `"lambda"` | Lambda 함수 | Lambda ARN으로 등록 |
+
+> **ECS 사용 시 주의**: Fargate는 인스턴스가 없으므로 반드시 `target_type = "ip"` 를 써야 한다. ECS EC2 모드도 Task 단위 IP 등록을 권장한다. `"instance"`로 설정하면 Task가 아닌 호스트 EC2 전체로 트래픽이 가서 포트 충돌이 생길 수 있다.
+
+→ [ECS 상세 개념](./ecs.md)
+
+**health_check 주요 인수:**
+
+| 인수 | 설명 |
+|------|------|
+| `path` | 헬스 체크 경로. 예: `"/health"` |
+| `healthy_threshold` | 정상 판정까지 연속 성공 횟수 (기본 3) |
+| `unhealthy_threshold` | 비정상 판정까지 연속 실패 횟수 (기본 3) |
+| `interval` | 체크 주기(초). 기본 30 |
+| `matcher` | 정상 응답 코드. 예: `"200"`, `"200-299"` |
+
+### `aws_lb_listener` — 리스너
+
+| 인수 | 필수 | 설명 |
+|------|------|------|
+| `load_balancer_arn` | 필수 | 연결할 ALB ARN |
+| `port` | 필수 | 수신 포트 |
+| `protocol` | 필수 | `"HTTP"` 또는 `"HTTPS"` |
+| `ssl_policy` | HTTPS 시 필수 | TLS 정책. 권장: `"ELBSecurityPolicy-TLS13-1-2-2021-06"` |
+| `certificate_arn` | HTTPS 시 필수 | ACM 인증서 ARN |
+| `default_action` | 필수 | `forward` / `redirect` / `fixed-response` |
+
+**HTTP → HTTPS 리다이렉트:**
+```hcl
+default_action {
+  type = "redirect"
+  redirect {
+    port        = "443"
+    protocol    = "HTTPS"
+    status_code = "HTTP_301"
+  }
+}
+```
+
+### 리소스 생성 순서 (의존 관계)
+
+```
+aws_lb_target_group
+       ↓
+aws_lb
+       ↓
+aws_lb_listener (HTTP:80 → redirect)
+aws_lb_listener (HTTPS:443 → forward → target_group)
+       ↓
+aws_lb_listener_rule (경로별 규칙, 선택)
+```
+
+---
+
+## 3. Terraform 구현 참고
 
 → [핵심 블록 & 모듈 구조](../terraform/core-blocks.md)
 → [모듈 구조 컨벤션](../terraform/module-structure.md)

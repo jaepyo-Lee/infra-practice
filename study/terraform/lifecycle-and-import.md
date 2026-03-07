@@ -1,6 +1,6 @@
 # Terraform Lifecycle & Import
 
-> 마지막 업데이트: 2026-03-07 (ignore_changes 섹션 추가)
+> 마지막 업데이트: 2026-03-07 (import {} 블록 섹션 추가, 실무 ignore_changes 패턴 추가)
 
 ---
 
@@ -240,7 +240,131 @@ terraform apply
 
 ---
 
-## 5. 직접 해볼 것
+## 5. `import {}` 블록 — 선언적 Import (Terraform 1.5+)
+
+기존 `terraform import` CLI 명령은 일회성 작업이라 CI/CD에 포함시키기 어렵다.
+Terraform 1.5+에서는 `.tf` 파일 안에 `import {}` 블록을 선언해 코드로 관리할 수 있다.
+
+```hcl
+# 콘솔에서 수동으로 만든 S3 버킷을 Terraform State에 등록
+import {
+  to = module.storage.aws_s3_bucket.this["my-bucket-name"]
+  id = "my-bucket-name"
+}
+
+import {
+  to = module.storage.aws_s3_bucket.this["another-bucket"]
+  id = "another-bucket"
+}
+```
+
+**동작 방식:**
+```
+import {} 블록 선언
+    ↓
+terraform plan
+    ↓
+"Will import aws_s3_bucket..." 메시지 확인
+    ↓
+terraform apply
+    ↓
+State에 등록됨 + import {} 블록은 자동으로 제거해도 됨 (한 번만 실행)
+```
+
+**CLI import vs import {} 블록 비교:**
+
+| | CLI `terraform import` | `import {}` 블록 |
+|---|---|---|
+| 선언 위치 | 터미널 명령 | .tf 파일 |
+| 반복 실행 | 매번 수동 실행 | plan/apply에 포함 |
+| 코드 리뷰 | 불가 | PR로 검토 가능 |
+| CI/CD 연동 | 어려움 | 자연스럽게 포함 |
+| Terraform 버전 | 모든 버전 | 1.5+ |
+
+**주의:** import 완료 후 `import {}` 블록을 남겨두면 다음 plan에서 "이미 존재하는 리소스를 import하려 한다"는 에러 없이 무시된다. 하지만 정리를 위해 apply 후 블록을 삭제하는 것이 관례다.
+
+**for_each 리소스 import 시 주소 형식:**
+```hcl
+# for_each로 만든 리소스
+resource "aws_s3_bucket" "this" {
+  for_each = var.buckets
+}
+
+# import 시 key를 큰따옴표로 감싸서 지정
+import {
+  to = aws_s3_bucket.this["bucket-name-key"]
+  id = "actual-bucket-name-in-aws"
+}
+```
+
+---
+
+## 6. 실무 `ignore_changes` 패턴 (ECS/CI-CD 환경)
+
+CI/CD가 Terraform 외부에서 리소스를 변경하는 경우, Terraform이 그 변경을 되돌리지 않도록 `ignore_changes`를 설정한다.
+
+```hcl
+# ECS Task Definition
+resource "aws_ecs_task_definition" "this" {
+  # ...
+
+  # GitHub Actions이 새 이미지로 Task Definition 새 revision을 생성함
+  # Terraform이 container_definitions를 덮어쓰면 배포 내용이 사라짐
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
+}
+
+# ECS Service
+resource "aws_ecs_service" "this" {
+  # ...
+
+  lifecycle {
+    ignore_changes = [
+      desired_count,              # Auto Scaling이 조정한 값 보존
+      task_definition,            # CI/CD가 최신 revision으로 업데이트
+      force_new_deployment,
+      capacity_provider_strategy,
+    ]
+  }
+}
+
+# ALB HTTPS Listener
+resource "aws_lb_listener" "https" {
+  # ...
+
+  lifecycle {
+    # ECS 서비스가 default_action을 forward 규칙으로 바꿈
+    # certificate_arn: 운영 중 독립적으로 갱신될 수 있음
+    ignore_changes = [default_action, certificate_arn, ssl_policy]
+  }
+}
+
+# Launch Template (EC2)
+resource "aws_launch_template" "this" {
+  # ...
+
+  lifecycle {
+    # AWS가 최신 AMI로 업데이트해도 기존 인스턴스 교체 방지
+    ignore_changes = [image_id]
+  }
+}
+
+# ASG
+resource "aws_autoscaling_group" "this" {
+  lifecycle {
+    create_before_destroy = true
+    # Auto Scaling이 조정한 desired_capacity를 Terraform이 되돌리지 않음
+    ignore_changes = [desired_capacity, desired_capacity_type]
+  }
+}
+```
+
+**원칙:** Terraform 외부(CI/CD, Auto Scaling, 콘솔)에서 변경하는 속성은 `ignore_changes`에 추가한다.
+
+---
+
+## 7. 직접 해볼 것
 
 현재 에러 상황 복구 실습:
 

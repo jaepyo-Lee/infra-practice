@@ -10,3 +10,6 @@
 | Lifecycle & Import: prevent_destroy, State Drift, import, state mv | [lifecycle-and-import.md](./lifecycle-and-import.md) | 2026-03-01 |
 | 쉘 단축키: alias 설정법, -parallelism 함수 대체, 단축키 목록 | [aliases.md](./aliases.md) | 2026-03-02 |
 | 인프라 테스트 전략: plan 리뷰, tfsec/checkov, Terratest, AST 정적 분석 원리 | [testing.md](./testing.md) | 2026-03-07 |
+| Remote State: terraform_remote_state, 멀티 State 아키텍처, _shared 패턴, 동적 output key 참조 | [remote-state.md](./remote-state.md) | 2026-03-07 |
+| 함수 & 표현식: coalesce, try, dynamic block, for 표현식, jsonencode, validation, optional | [functions-and-expressions.md](./functions-and-expressions.md) | 2026-03-07 |
+| 안티패턴 & 개선 포인트: God Module, ALB 공유, profile 하드코딩, ID 하드코딩, ignore_changes 과용 | [anti-patterns.md](./anti-patterns.md) | 2026-03-07 |

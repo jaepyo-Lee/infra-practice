@@ -49,7 +49,7 @@ apply_module "$ROOT_DIR/envs/dev/vpc"
  apply_module "$ROOT_DIR/envs/dev/security"
 
 # Phase 3 — Web Tier
-# apply_module "$ROOT_DIR/envs/dev/web"
+ apply_module "$ROOT_DIR/envs/dev/web"
 
 # Phase 4 — Application Tier
 # apply_module "$ROOT_DIR/envs/dev/app"

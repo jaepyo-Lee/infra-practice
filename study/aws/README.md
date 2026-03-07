@@ -3,7 +3,7 @@
 | 주제 | 파일 | Phase | 마지막 업데이트 |
 |------|------|-------|----------------|
 | EC2 (Elastic Compute Cloud) | [ec2.md](./ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
-| ECS (Elastic Container Service) | [ecs.md](./ecs.md) | Phase 4 — Application Tier | 2026-03-02 |
+| ECS (Elastic Container Service) | [ecs.md](./ecs.md) | Phase 4 — Application Tier | 2026-03-07 |
 | VPC (Virtual Private Cloud) | [vpc.md](./vpc.md) | Phase 1 — Network Foundation | 2026-02-28 |
 | Subnet | [subnet.md](./subnet.md) | Phase 1 — Network Foundation | 2026-03-01 |
 | Internet Gateway (IGW) | [igw.md](./igw.md) | Phase 1 — Network Foundation | 2026-03-01 |

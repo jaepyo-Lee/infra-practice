@@ -30,7 +30,7 @@ study/
 | Route53 (DNS, Hosted Zone, Public/Private) | [aws/route53.md](./aws/route53.md) | Phase 3 — Web Tier | 2026-03-07 |
 | ALB (Application Load Balancer) | [aws/alb.md](./aws/alb.md) | Phase 3 — Web Tier | 2026-03-01 |
 | EC2 (Elastic Compute Cloud) | [aws/ec2.md](./aws/ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
-| ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-02 |
+| ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-07 |
 | AWS Batch | [aws/batch.md](./aws/batch.md) | 프로젝트 외 참고 | 2026-03-01 |
 
 ---
@@ -47,3 +47,6 @@ study/
 | Lifecycle & Import: prevent_destroy, State Drift, import, state mv | [terraform/lifecycle-and-import.md](./terraform/lifecycle-and-import.md) | 2026-03-01 |
 | 쉘 단축키: alias 설정법, -parallelism 함수 대체, 단축키 목록 | [terraform/aliases.md](./terraform/aliases.md) | 2026-03-02 |
 | 인프라 테스트 전략: plan 리뷰, tfsec/checkov, Terratest, AST 정적 분석 원리 | [terraform/testing.md](./terraform/testing.md) | 2026-03-07 |
+| Remote State: terraform_remote_state, 멀티 State 아키텍처, _shared 패턴 | [terraform/remote-state.md](./terraform/remote-state.md) | 2026-03-07 |
+| 함수 & 표현식: coalesce, try, dynamic block, for 표현식, jsonencode, validation | [terraform/functions-and-expressions.md](./terraform/functions-and-expressions.md) | 2026-03-07 |
+| 안티패턴 & 개선 포인트: 실무 코드에서 발견한 잘못된 패턴들 | [terraform/anti-patterns.md](./terraform/anti-patterns.md) | 2026-03-07 |

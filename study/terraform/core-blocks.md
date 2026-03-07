@@ -432,6 +432,77 @@ resource "aws_nat_gateway" "nat" {
 
 ---
 
+## `count`로 optional 리소스 만들기
+
+`count = 0`이면 리소스가 생성되지 않는다. 변수 조건으로 리소스를 선택적으로 생성하는 패턴.
+
+```hcl
+# certificate_arn이 있을 때만 HTTPS 리스너 생성
+resource "aws_lb_listener" "https" {
+  count = var.certificate_arn != null ? 1 : 0
+
+  port            = 443
+  protocol        = "HTTPS"
+  certificate_arn = var.certificate_arn
+  ...
+}
+```
+
+**참조 시 주의**: count로 만든 리소스는 리스트로 관리된다. 참조 시 인덱스가 필요하다.
+
+```hcl
+# ❌ count 리소스를 단일 리소스처럼 참조
+aws_lb_listener.https.arn
+
+# ✅ 인덱스로 참조
+aws_lb_listener.https[0].arn
+
+# ✅ 또는 one() 함수로 단일 값 추출 (count 0이면 null)
+one(aws_lb_listener.https[*].arn)
+```
+
+---
+
+## `dynamic` block — 조건부 중첩 블록
+
+리소스 내부의 중첩 블록(nested block)을 조건에 따라 생성하거나 생략할 때 사용한다.
+
+일반 `if` 조건문으로는 블록 자체를 제거할 수 없다. `dynamic`을 써야 한다.
+
+```hcl
+resource "aws_lb_listener" "http" {
+  port     = 80
+  protocol = "HTTP"
+
+  default_action {
+    # certificate_arn 유무에 따라 action 타입 분기
+    type             = var.certificate_arn != null ? "redirect" : "forward"
+    target_group_arn = var.certificate_arn == null ? aws_lb_target_group.app.arn : null
+
+    # redirect 블록을 조건부로 생성
+    dynamic "redirect" {
+      for_each = var.certificate_arn != null ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+}
+```
+
+**`for_each = [1]` 패턴**: 블록을 1번 생성하려면 원소 1개짜리 리스트를, 생성하지 않으려면 빈 리스트를 넘긴다. 내용물(1)은 의미 없고 리스트 길이가 생성 여부를 결정한다.
+
+**`count` vs `dynamic` 선택 기준**:
+
+| 상황 | 사용 |
+|------|------|
+| 리소스 자체를 생성하거나 안 하거나 | `count` |
+| 리소스 내부의 블록을 생성하거나 안 하거나 | `dynamic` |
+
+---
+
 ## 참고 문서
 - Variables: https://developer.hashicorp.com/terraform/language/values/variables
 - Outputs: https://developer.hashicorp.com/terraform/language/values/outputs
