@@ -91,9 +91,9 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 
 - [x] Security Group 계층 설계 (ALB → App → DB)
 - [x] Network ACL 구성
-- [ ] IAM Role / Policy 설계 (EC2 Instance Profile)
+- [x] IAM Role / Policy 설계 (EC2 Instance Profile)
 - [ ] S3 버킷 정책 (퍼블릭 차단, VPC endpoint)
-- [ ] Secrets Manager로 DB 패스워드 관리
+- [x] Secrets Manager로 DB 패스워드 관리
 - [ ] ACM으로 SSL 인증서 발급
 
 **체크포인트:** DB 서브넷에는 App 서버에서만 접근 가능하고, 외부에서 직접 접근이 차단되는가?
@@ -275,7 +275,7 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | Phase 1 | Network Foundation | ✅ 완료 |
-| Phase 2 | Security Layer | 🔄 진행중 (2/6) |
+| Phase 2 | Security Layer | 🔄 진행중 (4/6) |
 | Phase 3 | Web Tier | 🔲 미시작 |
 | Phase 4 | Application Tier | 🔲 미시작 |
 | Phase 5 | Database Tier | 🔲 미시작 |

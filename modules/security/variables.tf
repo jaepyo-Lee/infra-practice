@@ -48,10 +48,22 @@ variable "iam_roles" {
   type = map(object({
     name                = string
     description         = optional(string, null)
-    assume_role_policy  = string           # Trust Policy JSON 문자열
-    policy_jsons        = optional(map(string), {})    # 커스텀 policy: { policy이름 = JSON문자열 }
-    managed_policy_arns = optional(list(string), [])   # AWS Managed Policy ARN 목록
+    assume_role_policy  = string                     # Trust Policy JSON 문자열
+    policy_jsons        = optional(map(string), {})  # 커스텀 policy: { policy이름 = JSON문자열 }
+    managed_policy_arns = optional(list(string), []) # AWS Managed Policy ARN 목록
   }))
   description = "생성할 IAM Role 목록. default={}이면 생성하지 않음"
   default     = {}
+}
+
+variable "secret_manager_meta" {
+  type = map(object({
+    name                    = string
+    description             = optional(string, null)
+    recovery_window_in_days = optional(number, 0)
+    secret_value=string
+    }
+  ))
+  default = {}
+  description = "생성할 secret manager목록."
 }

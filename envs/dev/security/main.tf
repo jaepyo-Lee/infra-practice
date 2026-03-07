@@ -37,4 +37,18 @@ module "security_group" {
       ]
     }
   }
+
+  secret_manager_meta = {
+    rds_credentials = {
+      name                    = "myapp/dev/rds-credentials"
+      description             = "Dev RDS 접속 자격증명"
+      recovery_window_in_days = 0  # 실습 환경: 즉시 삭제 가능
+      secret_value = jsonencode({
+        username = "admin"
+        password = "change-me-before-apply"  # 실제 값은 apply 전 교체 또는 수동 업데이트
+        host     = "TBD"  # RDS 구현 후 업데이트
+        port     = 3306
+      })
+    }
+  }
 }

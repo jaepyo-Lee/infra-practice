@@ -1,6 +1,6 @@
 # Terraform Lifecycle & Import
 
-> 마지막 업데이트: 2026-03-01
+> 마지막 업데이트: 2026-03-07 (ignore_changes 섹션 추가)
 
 ---
 
@@ -35,6 +35,45 @@ Terraform이 알고 있는 세계(State)와 AWS 실제 세계가 어긋나는 �
 ---
 
 ## 2. 핵심 도구들
+
+### `lifecycle { ignore_changes = [...] }`
+
+특정 속성의 변경을 Terraform이 감지하지 않도록 무시한다.
+Terraform은 기본적으로 `.tf` 코드와 실제 AWS 상태를 비교해 다르면 수정하는데, `ignore_changes`는 **특정 속성은 비교하지 말고 내버려둬** 라고 지시한다.
+
+```hcl
+resource "aws_secretsmanager_secret_version" "example" {
+  secret_id     = aws_secretsmanager_secret.example.id
+  secret_string = "초기값"  # 최초 apply 시에만 적용됨
+
+  lifecycle {
+    ignore_changes = [secret_string]
+    # 이후 콘솔에서 값을 바꿔도 terraform plan에서 감지하지 않음
+  }
+}
+```
+
+**동작 흐름:**
+```
+최초 apply  → secret_string = "초기값" 으로 생성
+콘솔에서    → secret_string = "실제비밀번호" 로 수동 변경
+다음 plan   → secret_string 차이 감지 안 함 → No changes
+```
+
+**주요 사용 사례:**
+
+| 상황 | 이유 |
+|------|------|
+| Secrets Manager 값 | 콘솔에서 수동 관리, Terraform이 덮어쓰지 않게 |
+| EC2 AMI ID | 외부에서 AMI 업데이트해도 EC2 재생성 방지 |
+| ASG desired_capacity | 오토스케일링이 조정한 값을 Terraform이 되돌리지 않게 |
+| 외부 도구가 붙인 태그 | 다른 팀/도구가 추가한 태그를 Terraform이 지우지 않게 |
+
+**`ignore_changes = all`**: 리소스의 모든 변경을 무시. 사실상 Terraform이 관리하지 않는 것과 같으므로 극히 드물게 쓴다.
+
+**주의**: `ignore_changes`는 최초 생성 후에만 적용된다. 처음 `apply`에서는 정상적으로 값이 들어간다.
+
+---
 
 ### `lifecycle { prevent_destroy = true }`
 
