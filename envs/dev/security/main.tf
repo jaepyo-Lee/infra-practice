@@ -9,8 +9,22 @@ terraform {
   }
 }
 
+# 기본 provider — alias 없는 provider가 반드시 있어야 한다
+# alias만 있으면 SG, IAM 등 다른 리소스들이 어느 provider를 쓸지 모름
 provider "aws" {
-  region = "ap-northeast-2" # Set the AWS region to US East (N. Virginia)
+  region = "ap-northeast-2"
+}
+
+# ALB용 ACM provider alias (언더스코어만 허용, 하이픈 불가)
+provider "aws" {
+  alias  = "ap_northeast_2"
+  region = "ap-northeast-2"
+}
+
+# CloudFront용 ACM provider alias
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
 }
 
 module "security_group" {
@@ -51,4 +65,29 @@ module "security_group" {
       })
     }
   }
+
+  acm = {
+    # ALB용 인증서 — ap-northeast-2 (is_global = false)
+    "alb_cert" = {
+      domain_name               = "api.example.com"
+      validation_method         = "DNS"
+      subject_alternative_names = []
+      is_global                 = false
+    }
+    # CloudFront용 인증서 — us-east-1 (is_global = true)
+    "cf_cert" = {
+      domain_name               = "example.com"
+      validation_method         = "DNS"
+      subject_alternative_names = ["www.example.com"]
+      is_global                 = true
+    }
+  }
+
+  providers = {
+    aws                = aws              # 기본 provider (SG, IAM, NACL 등)
+    aws.us_east_1      = aws.us_east_1   # CloudFront용 ACM
+    aws.ap_northeast_2 = aws.ap_northeast_2 # ALB용 ACM
+  }
+
+
 }

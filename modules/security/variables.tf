@@ -61,9 +61,23 @@ variable "secret_manager_meta" {
     name                    = string
     description             = optional(string, null)
     recovery_window_in_days = optional(number, 0)
-    secret_value=string
+    secret_value            = string
     }
   ))
-  default = {}
+  default     = {}
   description = "생성할 secret manager목록."
+}
+
+variable "acm" {
+  type = map(object({
+    domain_name               = string
+    validation_method         = optional(string, "DNS")    # DNS 또는 EMAIL. DNS 검증이 자동화에 유리
+    subject_alternative_names = optional(list(string), []) # 추가 도메인 목록
+    # is_global = true  → us-east-1 생성 (CloudFront 연결용)
+    # is_global = false → ap-northeast-2 생성 (ALB 연결용)
+    # provider 메타 인수는 동적 설정 불가하므로, 이 플래그로 리소스를 분기한다
+    is_global = optional(bool, false)
+  }))
+  description = "생성할 ACM 인증서 목록. is_global=true이면 us-east-1(CloudFront용), false이면 ap-northeast-2(ALB용)"
+  default     = {}
 }

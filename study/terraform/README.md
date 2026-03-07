@@ -9,3 +9,4 @@
 | Backend: State 원격 저장, S3+DynamoDB, State Lock, key 경로 설계 | [backend.md](./backend.md) | 2026-03-01 |
 | Lifecycle & Import: prevent_destroy, State Drift, import, state mv | [lifecycle-and-import.md](./lifecycle-and-import.md) | 2026-03-01 |
 | 쉘 단축키: alias 설정법, -parallelism 함수 대체, 단축키 목록 | [aliases.md](./aliases.md) | 2026-03-02 |
+| 인프라 테스트 전략: plan 리뷰, tfsec/checkov, Terratest, AST 정적 분석 원리 | [testing.md](./testing.md) | 2026-03-07 |
