@@ -1,6 +1,6 @@
 # Security Group
 
-> 마지막 업데이트: 2026-03-02
+> 마지막 업데이트: 2026-03-07 (SG outbound 의미, Stateful 오개념 교정 추가)
 
 ---
 
@@ -21,6 +21,25 @@ EC2 → 클라이언트 응답 ← 아웃바운드 규칙 없어도 자동 허�
 ```
 
 NACL(Stateless)과 다른 핵심 차이다. SG는 응답 트래픽을 별도로 열 필요가 없다.
+
+#### Stateful 오개념 교정
+
+"SG outbound 기본값이 전체 허용(`0.0.0.0/0`)이라서 응답이 자동으로 나가는 것 아닌가?"
+→ **아니다.** outbound를 전부 차단(`deny all`)해도, inbound로 들어온 연결의 응답은 자동으로 나간다.
+이것이 Stateful의 진짜 의미: **연결 상태(Connection Tracking)를 추적**해서 응답 패킷을 outbound 규칙 평가 없이 통과시킨다.
+
+#### SG outbound의 실제 의미
+
+SG outbound는 **이 EC2가 먼저 요청을 시작할 때** 제어한다.
+
+| 상황 | outbound 필요 여부 |
+|------|-----------------|
+| 클라이언트 → EC2 80 요청의 응답 | ❌ 불필요 (Stateful이 처리) |
+| EC2 → RDS 3306 연결 | ✅ outbound 3306 허용 필요 |
+| EC2 → 외부 API 443 호출 | ✅ outbound 443 허용 필요 |
+
+SG의 기본 outbound `0.0.0.0/0 ALL ALLOW`는 편의를 위한 기본값이지, Stateful의 근거가 아니다.
+최소 권한 원칙을 따르려면 outbound도 필요한 포트만 명시해야 한다.
 
 ### 허용만 가능, 거부 규칙은 없다
 

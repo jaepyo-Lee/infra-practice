@@ -89,8 +89,8 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 2 — 보안 계층 (Security Layer)
 > 목표: 최소 권한 원칙(Least Privilege)에 기반한 보안 구성을 이해하고 구현한다
 
-- [ ] Security Group 계층 설계 (ALB → App → DB)
-- [ ] Network ACL 구성
+- [x] Security Group 계층 설계 (ALB → App → DB)
+- [x] Network ACL 구성
 - [ ] IAM Role / Policy 설계 (EC2 Instance Profile)
 - [ ] S3 버킷 정책 (퍼블릭 차단, VPC endpoint)
 - [ ] Secrets Manager로 DB 패스워드 관리
@@ -165,7 +165,7 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 - [ ] 환경 분리 (dev / staging / prod)
 - [x] 재사용 가능한 모듈 구조 설계
 - [ ] `terraform.tfvars` 환경별 분리 (`.gitignore` 적용)
-- [ ] `data source` 활용 (AMI 최신 버전 자동 참조 등)
+- [x] `data source` 활용 (AMI 최신 버전 자동 참조 등)
 - [x] `locals`, `count`, `for_each` 활용
 - [ ] `terraform fmt`, `terraform validate`, `tfsec` CI 적용
 
@@ -275,12 +275,12 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | Phase 1 | Network Foundation | ✅ 완료 |
-| Phase 2 | Security Layer | 🔲 미시작 |
+| Phase 2 | Security Layer | 🔄 진행중 (2/6) |
 | Phase 3 | Web Tier | 🔲 미시작 |
 | Phase 4 | Application Tier | 🔲 미시작 |
 | Phase 5 | Database Tier | 🔲 미시작 |
 | Phase 6 | Observability | 🔲 미시작 |
-| Phase 7 | IaC Best Practices | 🔄 진행중 (3/7) |
+| Phase 7 | IaC Best Practices | 🔄 진행중 (4/7) |
 
 ---
 
