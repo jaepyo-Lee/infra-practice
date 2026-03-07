@@ -1,6 +1,6 @@
 # ACM (AWS Certificate Manager)
 
-> 마지막 업데이트: 2026-03-07 (DNS 레코드 타입 섹션 추가)
+> 마지막 업데이트: 2026-03-07 (HTTPS 전체 흐름, CNAME 소유권 원리, 오개념 교정 추가)
 
 ---
 
@@ -204,3 +204,112 @@ resource "aws_route53_record" "cloudfront" {
 ```
 
 Alias는 `records`/`ttl` 대신 `alias {}` 블록을 쓰는 것이 핵심 차이다.
+
+---
+
+## 5. HTTPS가 되기까지 전체 흐름
+
+ACM 하나만으로 HTTPS가 되는 게 아니다. 여러 서비스가 순서대로 연결된다.
+
+### 등장인물
+
+| 역할 | 서비스 |
+|------|------|
+| 도메인 이름 | Route53 또는 외부 도메인 업체 |
+| DNS 서버 | Route53 Hosted Zone |
+| SSL 인증서 | ACM |
+| 트래픽 받는 곳 | ALB 또는 CloudFront |
+
+### 6단계 흐름
+
+```
+1. [도메인 구입] example.com 구입
+        ↓
+2. [Route53 Hosted Zone 생성]
+   example.com의 DNS 서버 역할을 Route53이 담당
+   → NS 레코드 4개 발급 → 외부 도메인 업체에 등록 (위임)
+        ↓
+3. [ACM 인증서 요청]
+   "example.com HTTPS 인증서 주세요"
+   → ACM: "도메인 주인임을 증명해봐" → CNAME 레코드 발급
+        ↓
+4. [DNS 검증 — 소유권 증명]
+   ACM이 발급한 CNAME을 Route53에 등록
+   → ACM이 레코드 확인 → 인증서 발급 완료 (ISSUED)
+        ↓
+5. [ALB/CloudFront에 인증서 연결]
+   발급된 인증서를 ALB 리스너 또는 CloudFront에 붙임
+   → HTTPS 처리 가능해짐
+        ↓
+6. [Route53 A 레코드 등록]
+   example.com → ALB DNS 주소로 연결
+   → 사용자가 https://example.com 접속 가능
+```
+
+---
+
+## 6. CNAME이 소유권 증명이 되는 이유
+
+### 핵심 원리
+
+**DNS 레코드는 도메인 주인만 수정할 수 있다.**
+
+```
+ACM: "내가 시키는 CNAME 레코드를 DNS에 등록해봐"
+        ↓
+사용자: Route53에 CNAME 등록
+        ↓
+ACM: "저 레코드가 실제로 있네 → 이 사람이 도메인 주인 맞다"
+        ↓
+인증서 발급
+```
+
+google.com CNAME을 수정할 수 있는 사람은 google.com 주인뿐이므로, CNAME 등록 자체가 소유권 증명이 된다.
+
+### 비유
+
+```
+"이 집이 당신 집이야?" → "그럼 우편함에 이 편지 꽂아봐"
+                                  ↓
+편지를 꽂을 수 있음 = 집 주인이 맞음
+```
+
+CNAME 레코드 등록 = 우편함에 편지 꽂기
+
+### 갱신 때도 같은 CNAME 재사용
+
+검증 완료 후 CNAME 레코드를 **절대 삭제하면 안 된다.** ACM이 만료 60일 전 자동 갱신할 때 같은 CNAME으로 재검증하기 때문이다.
+
+---
+
+## 7. 오개념 교정
+
+### "ACM 리소스만 만들면 자동으로 인증서가 발급되고 갱신된다"
+
+❌ **틀렸다.**
+
+```
+aws_acm_certificate 생성
+    ↓
+"검증 대기" 상태 (PENDING_VALIDATION)  ← 여기서 멈춤
+    ↓
+DNS 검증 완료 필요  ← 이게 없으면 영원히 PENDING
+    ↓
+인증서 발급 완료 (ISSUED)
+    ↓
+이후 갱신은 자동
+```
+
+최초 발급 시 반드시 DNS 검증(CNAME 등록)이 필요하다. Terraform으로는 아래 세 리소스가 세트다:
+
+```
+aws_acm_certificate              ← 인증서 요청
+aws_route53_record               ← CNAME 자동 등록
+aws_acm_certificate_validation   ← 검증 완료 대기
+```
+
+`aws_acm_certificate_validation`이 없으면 검증되기 전에 다음 단계(ALB 연결)를 진행하려다 에러가 난다.
+
+### "Route53이 없어도 ACM을 쓸 수 있다"
+
+✅ **맞다.** 단, Route53 없이 쓰면 CNAME을 수동으로 외부 DNS에 등록해야 한다. Terraform 자동화가 불가능해진다. 실무에서 Route53과 ACM을 함께 쓰는 이유가 이것이다.

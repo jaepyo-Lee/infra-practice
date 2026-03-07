@@ -14,5 +14,6 @@
 | IAM (Identity and Access Management) | [iam.md](./iam.md) | Phase 2 — Security Layer | 2026-03-07 |
 | Secrets Manager | [secrets-manager.md](./secrets-manager.md) | Phase 2 — Security Layer | 2026-03-07 |
 | ACM (AWS Certificate Manager) | [acm.md](./acm.md) | Phase 2 — Security Layer | 2026-03-07 |
+| Route53 (DNS, Hosted Zone, Public/Private) | [route53.md](./route53.md) | Phase 3 — Web Tier | 2026-03-07 |
 | ALB (Application Load Balancer) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-01 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

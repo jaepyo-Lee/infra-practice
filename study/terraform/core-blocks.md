@@ -441,6 +441,81 @@ resource "aws_nat_gateway" "nat" {
 
 ---
 
+## `for` 표현식 — map 필터링 패턴
+
+`for_each`와 함께 자주 쓰이는 패턴. map에서 조건에 맞는 항목만 걸러낼 때 사용한다.
+
+### 기본 문법
+
+```hcl
+{ for k, v in 맵 : k => v if 조건 }
+```
+
+| 부분 | 의미 |
+|------|------|
+| `for k, v in 맵` | map 순회. `k`=키, `v`=값 |
+| `: k => v` | 결과 map의 키-값 구성 |
+| `if 조건` | true인 항목만 포함 |
+
+### 예시 — is_global 플래그로 리소스 분기
+
+```hcl
+# 입력 map
+var.acm = {
+  "alb_cert" = { domain_name = "api.example.com", is_global = false }
+  "cf_cert"  = { domain_name = "example.com",     is_global = true  }
+}
+
+# is_global = false만 필터링
+{ for k, v in var.acm : k => v if !v.is_global }
+# 결과: { "alb_cert" = { ... } }
+
+# is_global = true만 필터링
+{ for k, v in var.acm : k => v if v.is_global }
+# 결과: { "cf_cert" = { ... } }
+```
+
+### 왜 쓰는가
+
+Terraform의 `provider` 메타 인수는 동적으로 설정할 수 없다. 리소스를 두 개로 나누고 for 필터링으로 각각 다른 provider를 적용하는 패턴이다.
+
+```hcl
+# ALB용 (ap-northeast-2)
+resource "aws_acm_certificate" "regional" {
+  for_each = { for k, v in var.acm : k => v if !v.is_global }
+  provider = aws.ap_northeast_2
+  ...
+}
+
+# CloudFront용 (us-east-1)
+resource "aws_acm_certificate" "global" {
+  for_each = { for k, v in var.acm : k => v if v.is_global }
+  provider = aws.us_east_1
+  ...
+}
+```
+
+### for 표현식 전체 패턴 정리
+
+```hcl
+# 리스트 → 리스트
+[ for item in list : item.name ]
+
+# 리스트 → map
+{ for item in list : item.key => item }
+
+# map → map (전체)
+{ for k, v in map : k => v }
+
+# map → map (필터링)
+{ for k, v in map : k => v if 조건 }
+
+# 중첩 map 평탄화 (flatten 대안)
+[ for k, v in map : { key = k, value = v } ]
+```
+
+---
+
 ## 11. AWS 리소스별 핵심 파라미터 — Phase 1 Network
 
 > 각 리소스를 Terraform으로 생성할 때 쓰는 인수(argument)의 의미와 필요성 설명.

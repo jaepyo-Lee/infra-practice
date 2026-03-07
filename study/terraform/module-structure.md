@@ -77,6 +77,74 @@ module "us_east" {
 }
 ```
 
+### provider alias 규칙 — 흔한 실수
+
+**alias 이름에 하이픈(`-`) 불가, 언더스코어(`_`)만 허용**
+
+```hcl
+# ❌ 하이픈 사용 — 참조 시 aws.ap-northeast-2 불가
+provider "aws" {
+  alias  = "ap-northeast-2"
+  region = "ap-northeast-2"
+}
+
+# ✅ 언더스코어 사용
+provider "aws" {
+  alias  = "ap_northeast_2"
+  region = "ap-northeast-2"
+}
+
+# 참조 시
+provider = aws.ap_northeast_2  # ✅
+```
+
+**alias provider만 선언하면 기본 provider가 사라진다**
+
+```hcl
+# ❌ 기본 provider 없음 — SG, IAM 등 다른 리소스가 어느 provider를 쓸지 모름
+provider "aws" {
+  alias  = "ap_northeast_2"
+  region = "ap-northeast-2"
+}
+
+# ✅ alias와 별개로 기본 provider(alias 없음)를 반드시 선언
+provider "aws" {
+  region = "ap-northeast-2"  # 기본 provider
+}
+
+provider "aws" {
+  alias  = "ap_northeast_2"
+  region = "ap-northeast-2"  # alias provider
+}
+```
+
+**module의 `providers` 블록에도 기본 `aws` 전달 필수**
+
+```hcl
+module "security" {
+  source = "../../../modules/security"
+  providers = {
+    aws                = aws               # 기본 — 없으면 SG/IAM 등이 provider 못 찾음
+    aws.us_east_1      = aws.us_east_1
+    aws.ap_northeast_2 = aws.ap_northeast_2
+  }
+}
+```
+
+**child module에서 alias를 받으려면 `configuration_aliases` 선언 필요**
+
+```hcl
+# modules/security/versions.tf
+terraform {
+  required_providers {
+    aws = {
+      source                = "hashicorp/aws"
+      configuration_aliases = [aws.us_east_1, aws.ap_northeast_2]
+    }
+  }
+}
+```
+
 ---
 
 ## 3. `outputs.tf` — 모듈별 노출해야 할 값들
