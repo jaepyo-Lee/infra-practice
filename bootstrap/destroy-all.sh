@@ -54,7 +54,7 @@ fi
 # destroy_module "$ROOT_DIR/envs/dev/web"
 
 # Phase 2 — Security Layer
-# destroy_module "$ROOT_DIR/envs/dev/security"
+ destroy_module "$ROOT_DIR/envs/dev/security"
 
 # Phase 1 — Network Foundation
 destroy_module "$ROOT_DIR/envs/dev/network"
