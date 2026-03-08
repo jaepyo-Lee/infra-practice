@@ -146,12 +146,12 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 6 — 모니터링 & 관찰성 (Observability)
 > 목표: 문제를 사전에 감지하고 빠르게 대응할 수 있는 운영 환경을 갖춘다
 
-- [ ] CloudWatch 대시보드 구성
-- [ ] CloudWatch Alarms (CPU, 메모리, 에러율, 응답시간)
-- [ ] SNS 토픽 및 구독 (이메일 알림)
-- [ ] ALB Access Log → S3 저장
-- [ ] CloudTrail 활성화 (API 감사 로그)
-- [ ] CloudWatch Logs (App 로그 수집)
+- [x] CloudWatch 대시보드 구성
+- [x] CloudWatch Alarms (CPU, 메모리, 에러율, 응답시간)
+- [x] SNS 토픽 및 구독 (이메일 알림)
+- [x] ALB Access Log → S3 저장
+- [x] CloudTrail 활성화 (API 감사 로그)
+- [x] CloudWatch Logs (App 로그 수집)
 - [ ] CloudWatch Insights 쿼리
 
 **체크포인트:** 이상 징후 발생 시 이메일로 알림이 오고, 대시보드에서 시스템 상태를 한눈에 파악 가능한가?
@@ -279,7 +279,7 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 | Phase 3 | Web Tier | 🔄 진행중 (4/6) |
 | Phase 4 | Application Tier | ✅ 완료 |
 | Phase 5 | Database Tier | ✅ 완료 |
-| Phase 6 | Observability | 🔲 미시작 |
+| Phase 6 | Observability | 🔄 진행중 (6/7) |
 | Phase 7 | IaC Best Practices | 🔄 진행중 (4/7) |
 
 ---

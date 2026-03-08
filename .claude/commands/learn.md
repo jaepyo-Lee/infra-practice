@@ -23,7 +23,7 @@ AWS 서비스명이 주제인 경우:
 - EC2, Launch Template, ASG, ALB, CloudFront, WAF, Route53, ACM
 - RDS, Aurora, ElastiCache, S3
 - IAM, Security Group, NACL, Secrets Manager
-- CloudWatch, CloudTrail, SNS 등
+- CloudWatch, CloudTrail, SNS, SQS, Kinesis 등
 
 ### Terraform 카테고리 (`study/terraform/`)
 Terraform 언어/개념/동작 방식이 주제인 경우:

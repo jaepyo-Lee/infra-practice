@@ -350,6 +350,47 @@ Kinesis처럼 앱 → Kinesis → Lambda → DB로 여러 레이어가 데이터
 
 ---
 
+---
+
+## CloudWatch 알람 모듈 구조 패턴
+
+### 재사용 모듈보다 리소스 특화가 표준
+
+CloudWatch 알람은 AWS 서비스마다 namespace/dimension이 완전히 다르기 때문에,
+범용 재사용 모듈로 추상화하면 변수가 폭발적으로 늘어나 오히려 복잡해진다.
+
+```
+ALB   → namespace: "AWS/ApplicationELB",  dimension: LoadBalancer
+RDS   → namespace: "AWS/RDS",             dimension: DBClusterIdentifier
+Redis → namespace: "AWS/ElastiCache",     dimension: ReplicationGroupId
+ASG   → namespace: "AWS/EC2",             dimension: AutoScalingGroupName
+```
+
+### 두 가지 구성 방식
+
+**방식 1: monitoring 모듈에 통합 (이 프로젝트)**
+```
+modules/monitoring/main.tf ← ALB/ASG/RDS/Redis 알람을 한 파일에
+```
+- 소규모 프로젝트에 적합, 알람 간 연관성이 한눈에 보임
+- 단점: 파일이 길어짐
+
+**방식 2: 각 리소스 모듈에 알람 포함**
+```
+modules/web/      ← ALB 알람도 여기에
+modules/app/      ← ASG 알람도 여기에
+modules/database/ ← RDS/Redis 알람도 여기에
+```
+- 대규모 프로젝트, 팀별 소유권이 명확할 때 유리
+- 단점: SNS 토픽 ARN을 모든 모듈에 주입해야 함
+
+### 핵심 원칙
+
+**재사용 모듈이 맞는 경우**: 같은 구조가 3회 이상 반복 (VPC, Subnet 등)
+**리소스 특화가 맞는 경우**: 서비스마다 메트릭 구조가 달라 공통 추상화가 불가능한 경우 (알람)
+
+---
+
 ## 관련 개념
 - Provider Inheritance: https://developer.hashicorp.com/terraform/language/modules/develop/providers
 - Terraform Style Guide: https://developer.hashicorp.com/terraform/language/style

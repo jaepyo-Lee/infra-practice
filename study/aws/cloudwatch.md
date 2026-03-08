@@ -1,6 +1,6 @@
 # CloudWatch
 
-> 마지막 업데이트: 2026-03-08
+> 마지막 업데이트: 2026-03-08 (Phase 6 구현 반영)
 > Phase: Phase 6 — Observability
 
 ---
@@ -110,6 +110,49 @@ Alarm이 ALARM 상태가 되면 할 수 있는 것:
 
 ---
 
+### ⚠️ Logs ≠ Metrics (자주 혼동하는 오개념)
+
+```
+CloudWatch Log Group 생성 = 로그(텍스트)를 볼 수 있음
+                          ≠ 메트릭(숫자 지표)을 볼 수 있음
+```
+
+| 구분 | 대상 | 보는 방법 |
+|------|------|---------|
+| Metrics | CPU %, 연결 수, 응답시간 등 숫자 | CloudWatch → Metrics (자동 수집, 별도 설정 불필요) |
+| Logs | 에러 메시지, 슬로우 쿼리 텍스트 | CloudWatch → Log Groups (Log Group 필요) |
+| Alarms | 메트릭 임계값 초과 시 알림 | aws_cloudwatch_metric_alarm 리소스 별도 생성 |
+
+**RDS 메트릭(CPU, 연결 수 등)은 Log Group 없이도 콘솔에서 확인 가능**하다. Log Group은 로그 텍스트 내용을 보기 위한 것이다.
+
+### enabled_cloudwatch_logs_exports 자동 생성 동작
+
+```hcl
+enabled_cloudwatch_logs_exports = ["audit", "error", "slowquery"]
+```
+
+이 설정 시 AWS가 Log Group을 **자동 생성**한다:
+```
+/aws/rds/cluster/{cluster-name}/audit
+/aws/rds/cluster/{cluster-name}/error
+/aws/rds/cluster/{cluster-name}/slowquery
+```
+
+**문제**: 자동 생성된 Log Group은 **retention_in_days가 무제한**이다 → 비용 무한 증가 위험
+
+**해결**: Terraform에서 같은 이름으로 `aws_cloudwatch_log_group`을 명시적으로 생성하면 retention을 제어할 수 있다.
+
+```hcl
+# 자동 생성되는 경로와 이름을 정확히 맞춰야 함
+# 이름이 다르면 AWS가 새 그룹을 또 자동 생성해버림
+resource "aws_cloudwatch_log_group" "rds_slowquery" {
+  name              = "/aws/rds/cluster/${var.cluster_id}/slowquery"
+  retention_in_days = 30
+}
+```
+
+---
+
 ### 실무에서 자주 하는 실수
 
 1. **`retention_in_days` 미설정** → 기본 무제한, 로그 비용 무한 증가
@@ -196,3 +239,106 @@ Phase 6에서:
 
 **공식 문서**: [CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html)
 **검색 키워드**: `aws_cloudwatch_metric_alarm terraform`, `CloudWatch namespace list`, `CloudWatch Logs Insights query`
+
+---
+
+## 5. CloudWatch 서비스(자동) vs Dashboard(수동 구성) 구분
+
+CloudWatch 서비스 자체와 `aws_cloudwatch_dashboard` 리소스는 다른 것이다.
+
+| 구분 | 주체 | 설명 |
+|------|------|------|
+| CloudWatch 메트릭 수집 | AWS 자동 | 별도 설정 없이 EC2, ALB, RDS 등 메트릭이 자동으로 쌓임 |
+| CloudWatch 로그 수집 | 서비스 설정 필요 | RDS `enabled_cloudwatch_logs_exports`, CloudWatch Agent 등 |
+| `aws_cloudwatch_dashboard` | 직접 생성 | 수집된 메트릭을 어떻게 시각화할지 레이아웃 정의 |
+
+```
+메트릭은 자동으로 쌓인다
+    ↓
+대시보드 = "그 메트릭들을 어떤 그래프로, 어떤 레이아웃으로 볼지" 를 정의하는 것
+대시보드 없어도 메트릭은 존재한다 — 단지 한눈에 볼 수 없을 뿐
+```
+
+`aws_cloudwatch_dashboard`는 CloudWatch 기능을 켜는 게 아니라 **커스텀 뷰를 만드는 것**이다.
+
+---
+
+## 6. CloudWatch Dashboard
+
+여러 메트릭을 한 화면에서 시각화하는 대시보드다.
+
+### 구조
+
+```
+aws_cloudwatch_dashboard
+  └── dashboard_body (JSON)
+        └── widgets []
+              ├── type: "metric" | "log" | "text"
+              ├── x, y, width, height  ← 24컬럼 그리드 위치
+              └── properties
+                    ├── metrics []     ← [namespace, metric_name, dimension_key, dimension_value]
+                    ├── region
+                    ├── period
+                    └── stat
+```
+
+### Terraform 예시
+
+```hcl
+resource "aws_cloudwatch_dashboard" "main" {
+  dashboard_name = "dev-overview"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          title  = "ALB 5xx 에러"
+          region = "ap-northeast-2"
+          metrics = [
+            ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count",
+             "LoadBalancer", "app/dev-alb/abc123",
+             { stat = "Sum", label = "5xx 에러" }]
+          ]
+          view   = "timeSeries"
+          period = 60
+        }
+      }
+    ]
+  })
+}
+```
+
+### ALB ARN suffix 추출 패턴
+
+CloudWatch Dimension에는 전체 ARN이 아닌 suffix만 필요하다.
+
+```hcl
+# 전체 ARN을 받아서 suffix를 추출하는 패턴
+locals {
+  # ALB ARN: arn:aws:...:loadbalancer/app/dev-alb/abc123
+  # suffix:  app/dev-alb/abc123
+  alb_arn_suffix = regex("loadbalancer/(.*)", var.alb_arn)[0]
+
+  # TG ARN: arn:aws:...:targetgroup/dev-tg/abc123
+  # suffix: targetgroup/dev-tg/abc123
+  tg_arn_suffix = regex(":(targetgroup/.*)", var.target_group_arn)[0]
+}
+```
+
+이렇게 하면 `aws_lb.arn_suffix`를 별도 output으로 전달하지 않아도 된다.
+
+### treat_missing_data 옵션
+
+```
+notBreaching  — 데이터 없으면 정상으로 간주 (새벽 트래픽 없는 시간대 오탐 방지)
+breaching     — 데이터 없으면 알람으로 간주 (엄격한 모니터링)
+ignore        — 데이터 없으면 현재 상태 유지
+missing       — 기본값. 데이터 없으면 INSUFFICIENT_DATA
+```
+
+실무에서는 `notBreaching`을 가장 많이 쓴다.

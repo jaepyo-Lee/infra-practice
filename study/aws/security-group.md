@@ -1,6 +1,6 @@
 # Security Group
 
-> 마지막 업데이트: 2026-03-07 (SG outbound 의미, Stateful 오개념 교정 추가)
+> 마지막 업데이트: 2026-03-08 (ingress 규칙 속성 역할 구분 추가)
 
 ---
 
@@ -154,6 +154,40 @@ VPC 생성 시 Default SG가 자동 생성된다. 기본 설정은 **같은 SG �
 | `security_group_id` | ✅ | 이 규칙이 적용될 SG ID |
 | `cidr_blocks` | 선택 | IP 범위로 출처 지정 시 |
 | `source_security_group_id` | 선택 | **SG ID로 출처 지정 시** — 계층 구조 구현의 핵심 |
+
+#### `security_groups`(출처)와 `from_port/to_port`(포트)는 다른 역할 — 둘 다 필요
+
+인라인 `ingress` 블록 기준으로 두 속성의 역할을 혼동하기 쉽다:
+
+| 속성 | 역할 | 없으면 |
+|------|------|--------|
+| `from_port` / `to_port` | **어떤 포트**를 허용할지 | 문법 에러 (필수값) |
+| `security_groups` | **어디서 오는 트래픽**을 허용할지 | 모든 IP에서 허용 (보안 취약) |
+
+```hcl
+ingress {
+  from_port       = 6379        # Redis 포트만 허용
+  to_port         = 6379
+  protocol        = "tcp"
+  security_groups = [var.app_sg_id]  # App SG에서 오는 트래픽만 허용
+}
+# 의미: "App SG가 붙은 인스턴스에서 오는 6379/tcp 트래픽만 허용"
+```
+
+`security_groups`만 있으면 포트 미명시 → 에러. `from_port/to_port`만 있으면 출처 무제한 → 보안 취약.
+
+#### `to_port`가 별도로 존재하는 이유
+
+AWS SG 규칙 스펙 자체가 **포트 범위(from ~ to)** 로 설계되어 있다.
+단일 포트도 범위의 특수 케이스(`6379 ~ 6379`)로 표현하므로 두 값 모두 필수다.
+
+```hcl
+from_port = 8000
+to_port   = 8080   # 8000~8080 전체 허용
+
+from_port = 6379
+to_port   = 6379   # 6379 하나만 허용 (같은 값)
+```
 
 ---
 

@@ -67,12 +67,84 @@ ALB Listener는 요청의 특성에 따라 다른 Target Group으로 보낼 수 
 | HTTP 메서드 | `POST /upload` → 별도 업로드 서버 |
 | 헤더/쿼리 | 특정 헤더 값 기반 라우팅 |
 
+### ALB Access Logs → S3 연결 구조 (두 단계 필요)
+
+ALB 접근 로그를 S3에 저장하려면 **두 가지 설정이 모두 필요**하다:
+
+```
+1단계: S3 버킷 생성 (monitoring 모듈)
+  aws_s3_bucket "alb_logs"
+  aws_s3_bucket_policy  ← ELB 서비스 계정이 쓸 수 있도록 버킷 정책 필요
+
+2단계: ALB에 버킷 연결 (web 모듈)
+  resource "aws_lb" "main" {
+    access_logs {
+      bucket  = "버킷 이름"
+      enabled = true
+    }
+  }
+```
+
+S3 버킷만 만들면 ALB가 자동으로 로그를 보내지 않는다.
+ALB 리소스에 `access_logs` 블록을 설정해야 비로소 연결된다.
+
+**흔한 실수**: 모니터링 모듈에서 버킷을 만들어놓고 ALB 모듈에서 연결을 빠뜨리는 경우.
+이 프로젝트에서도 현재 버킷은 생성되어 있지만 ALB `access_logs` 블록이 아직 미연결 상태다.
+
+---
+
 ### 실무에서 자주 하는 실수
 
 1. **EC2 Security Group에 0.0.0.0/0 허용** → ALB를 거치지 않고 EC2에 직접 접근 가능. EC2 SG는 ALB SG에서 오는 트래픽만 허용해야 한다
 2. **X-Forwarded-For 미처리** → 모든 요청의 출발지가 ALB IP로 찍혀 로그가 무의미해짐
 3. **Target Group 헬스 체크 경로 오설정** → EC2가 정상인데 트래픽을 못 받음
 4. **HTTP → HTTPS 리다이렉트 미설정** → 80 포트로 접근 시 그냥 통과되어 평문 통신
+
+### Public ALB vs Private ALB (internal)
+
+ALB는 두 가지 모드로 생성할 수 있다:
+
+```
+internet-facing (internal=false): 퍼블릭 IP 할당, 인터넷에서 직접 접근 가능
+internal        (internal=true):  프라이빗 IP만 할당, VPC 내부에서만 접근 가능
+```
+
+```hcl
+resource "aws_lb" "public" {
+  internal = false  # internet-facing — 이 프로젝트 구성
+}
+
+resource "aws_lb" "private" {
+  internal = true   # VPC 내부 전용
+}
+```
+
+**Private ALB 사용 케이스:**
+
+```
+인터넷 → Public ALB → App 서버 → [Private ALB] → 마이크로서비스 B
+                                                  → 마이크로서비스 C
+```
+
+마이크로서비스 아키텍처에서 서비스 간 트래픽 라우팅에 주로 사용한다. 외부에 노출하지 않아도 되는 내부 API 서버 앞에 놓는다.
+
+**Private ALB + PHZ 조합:**
+
+Private ALB의 DNS 이름은 길고 관리하기 어렵다:
+```
+internal-dev-alb-123456.ap-northeast-2.elb.amazonaws.com
+```
+
+Route53 Private Hosted Zone으로 짧은 내부 도메인을 부여할 수 있다:
+```
+api.internal → internal-dev-alb-xxx.elb.amazonaws.com
+```
+
+VPC 내부에서 `api.internal`로 요청하면 VPC DNS Resolver가 PHZ를 먼저 확인해 Private ALB IP를 반환한다. 인터넷에서는 이 도메인이 조회되지 않는다.
+
+→ [PHZ + VPC DNS Resolver 동작 원리](./route53.md)
+
+---
 
 ### Security Group 연결 구조 (Best Practice)
 

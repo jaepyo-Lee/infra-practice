@@ -197,7 +197,90 @@ DNS에 특정 값을 추가할 수 있다 = 도메인 소유자라는 증명. AC
 
 ---
 
-## 4. 이 프로젝트에서의 역할
+## 4. VPC DNS Resolver와 PHZ 동작 원리
+
+### 구분의 주체: VPC DNS Resolver
+
+Public ALB와 Private ALB의 DNS를 구분하는 주체는 **VPC DNS Resolver**다.
+
+```
+주소: 169.254.169.253 (또는 VPC CIDR의 +2번째 주소, 예: 10.0.0.2)
+역할: VPC 내부의 모든 DNS 쿼리를 받는 첫 번째 창구
+특징: AWS가 모든 VPC에 자동 제공, 별도 설치/설정 불필요
+```
+
+VPC에서 DNS가 동작하려면 두 설정이 true여야 한다:
+```hcl
+resource "aws_vpc" "main" {
+  enable_dns_support   = true  # VPC DNS Resolver 활성화
+  enable_dns_hostnames = true  # 인스턴스에 DNS 이름 부여
+}
+```
+
+### PHZ 우선순위
+
+VPC DNS Resolver의 조회 순서:
+```
+1. PHZ (이 VPC에 연결된 Private Hosted Zone) ← 먼저 확인
+2. Public Hosted Zone                          ← PHZ에 없을 때
+3. 인터넷 DNS (외부 도메인)                    ← 그 다음
+```
+
+PHZ가 VPC에 **associate(연결)** 되어 있으면, 같은 도메인이라도 VPC 내부에서는 PHZ 결과가 Public HZ를 덮어씌운다.
+
+### DNS 전체 조회 흐름
+
+**인터넷 사용자가 `api.example.com` 조회하는 경우:**
+
+```
+[사용자 PC]
+    │ "api.example.com의 IP가 뭐야?"
+    ▼
+[ISP DNS 서버 / 8.8.8.8]
+    │ "모르면 Root DNS에게 물어봐"
+    ▼
+[Root DNS] → ".com 담당 서버한테 물어봐"
+    ▼
+[.com DNS] → "example.com은 Route53이 담당해"
+    ▼
+[Route53 — Public Hosted Zone]
+    │ PHZ는 여기서 보이지 않음 (VPC 밖이라)
+    │ api.example.com → 57.x.x.x (Public ALB IP)
+    ▼
+[사용자 PC] → 57.x.x.x로 접속
+```
+
+**VPC 내부 EC2가 동일한 도메인 조회하는 경우:**
+
+```
+[VPC 내부 EC2]
+    │ "api.example.com의 IP가 뭐야?"
+    ▼
+[VPC DNS Resolver] ← 여기서 구분이 일어남
+    │ "이 VPC에 연결된 PHZ 먼저 확인"
+    │ api.example.com → 10.0.1.x (Private ALB IP) ← PHZ에서 찾음
+    ▼
+[EC2] → 10.0.1.x로 접속 (인터넷 안 나감, VPC 내부에서 해결)
+```
+
+### Split-horizon DNS
+
+같은 도메인이 **조회 위치에 따라 다른 IP를 반환**하는 패턴이다.
+
+```
+api.example.com
+  인터넷에서 조회 → 57.x.x.x  (Public ALB)
+  VPC 안에서 조회 → 10.0.1.x  (Private ALB)
+```
+
+**장점:**
+- 내부 서비스끼리 인터넷을 경유하지 않음 → 레이턴시 감소, 데이터 전송 비용 절감
+- 외부에는 Public ALB의 WAF/보안 계층을 통하게 함
+- 앱 코드는 같은 도메인을 사용 → 환경 별 분기 불필요
+
+---
+
+## 5. 이 프로젝트에서의 역할
 
 ```
 Public Hosted Zone  → example.com

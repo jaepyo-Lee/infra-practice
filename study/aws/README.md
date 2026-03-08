@@ -15,13 +15,18 @@
 | Secrets Manager | [secrets-manager.md](./secrets-manager.md) | Phase 2 — Security Layer | 2026-03-07 |
 | ACM (AWS Certificate Manager) | [acm.md](./acm.md) | Phase 2 — Security Layer | 2026-03-07 |
 | S3 (Simple Storage Service) | [s3.md](./s3.md) | Phase 2 — Security Layer | 2026-03-07 |
-| Route53 (DNS, Hosted Zone, Public/Private) | [route53.md](./route53.md) | Phase 3 — Web Tier | 2026-03-08 |
-| ALB (Application Load Balancer) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-07 |
+| Route53 (DNS Zone, PHZ, VPC DNS Resolver, Split-horizon DNS) | [route53.md](./route53.md) | Phase 3 — Web Tier | 2026-03-08 |
+| ALB (Application Load Balancer, Public vs Private ALB) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-08 |
 | CloudFront | [cloudfront.md](./cloudfront.md) | Phase 3 — Web Tier | 2026-03-08 |
 | WAF (Web Application Firewall) | [waf.md](./waf.md) | Phase 3 — Web Tier | 2026-03-08 |
 | ASG (Auto Scaling Group) & Launch Template | [asg.md](./asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | EC2 / Launch Template / ASG (통합 정리) | [ec2-asg.md](./ec2-asg.md) | Phase 4 — Application Tier | 2026-03-08 |
-| CloudWatch | [cloudwatch.md](./cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
+| CloudWatch (Metrics, Logs, Alarms, Dashboard) | [cloudwatch.md](./cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
+| SNS (Simple Notification Service) | [sns.md](./sns.md) | Phase 6 — Observability | 2026-03-08 |
+| CloudTrail (API 감사 로그) | [cloudtrail.md](./cloudtrail.md) | Phase 6 — Observability | 2026-03-08 |
+| 네임스페이스 (CloudWatch namespace / ECS Cloud Map) | [namespace.md](./namespace.md) | Phase 6 — Observability | 2026-03-08 |
 | RDS Aurora (Aurora MySQL, Multi-AZ, Cluster 구조) | [rds-aurora.md](./rds-aurora.md) | Phase 5 — Database Tier | 2026-03-08 |
 | ElastiCache Redis (Replication Group, Failover, 암호화) | [elasticache.md](./elasticache.md) | Phase 5 — Database Tier | 2026-03-08 |
+| SQS (Simple Queue Service) | [sqs.md](./sqs.md) | 프로젝트 외 참고 | 2026-03-08 |
+| Kinesis (Data Streams, Fan-out, KCL, Shard) | [kinesis.md](./kinesis.md) | 프로젝트 외 참고 | 2026-03-08 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

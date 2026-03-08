@@ -27,18 +27,23 @@ study/
 | IAM (Identity and Access Management) | [aws/iam.md](./aws/iam.md) | Phase 2 — Security Layer | 2026-03-07 |
 | Secrets Manager | [aws/secrets-manager.md](./aws/secrets-manager.md) | Phase 2 — Security Layer | 2026-03-07 |
 | ACM (AWS Certificate Manager) | [aws/acm.md](./aws/acm.md) | Phase 2 — Security Layer | 2026-03-07 |
-| Route53 (DNS, Hosted Zone, Public/Private) | [aws/route53.md](./aws/route53.md) | Phase 3 — Web Tier | 2026-03-07 |
-| ALB (Application Load Balancer) | [aws/alb.md](./aws/alb.md) | Phase 3 — Web Tier | 2026-03-01 |
+| Route53 (DNS Zone, PHZ, VPC DNS Resolver, Split-horizon DNS) | [aws/route53.md](./aws/route53.md) | Phase 3 — Web Tier | 2026-03-08 |
+| ALB (Application Load Balancer, Public vs Private ALB) | [aws/alb.md](./aws/alb.md) | Phase 3 — Web Tier | 2026-03-08 |
 | S3 (Simple Storage Service) | [aws/s3.md](./aws/s3.md) | Phase 2 — Security Layer | 2026-03-07 |
 | CloudFront | [aws/cloudfront.md](./aws/cloudfront.md) | Phase 3 — Web Tier | 2026-03-08 |
 | WAF (Web Application Firewall) | [aws/waf.md](./aws/waf.md) | Phase 3 — Web Tier | 2026-03-08 |
 | EC2 (Elastic Compute Cloud) | [aws/ec2.md](./aws/ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
 | ASG (Auto Scaling Group) & Launch Template | [aws/asg.md](./aws/asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-07 |
-| CloudWatch | [aws/cloudwatch.md](./aws/cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
-| RDS Aurora (Aurora MySQL, Multi-AZ, Cluster 구조, Failover) | [aws/rds-aurora.md](./aws/rds-aurora.md) | Phase 5 — Database Tier | 2026-03-08 |
+| CloudWatch (Metrics, Logs, Alarms, Dashboard) | [aws/cloudwatch.md](./aws/cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
+| SNS (Simple Notification Service) | [aws/sns.md](./aws/sns.md) | Phase 6 — Observability | 2026-03-08 |
+| CloudTrail (API 감사 로그) | [aws/cloudtrail.md](./aws/cloudtrail.md) | Phase 6 — Observability | 2026-03-08 |
+| 네임스페이스 (CloudWatch namespace / ECS Cloud Map) | [aws/namespace.md](./aws/namespace.md) | Phase 6 — Observability | 2026-03-08 |
+| RDS Aurora (Aurora MySQL, Multi-AZ, Cluster 구조, Failover, 스냅샷) | [aws/rds-aurora.md](./aws/rds-aurora.md) | Phase 5 — Database Tier | 2026-03-08 |
 | ElastiCache Redis (Replication Group, Failover, 암호화) | [aws/elasticache.md](./aws/elasticache.md) | Phase 5 — Database Tier | 2026-03-08 |
 | EC2 + ASG + Launch Template (통합 정리) | [aws/ec2-asg.md](./aws/ec2-asg.md) | Phase 4 — Application Tier | 2026-03-08 |
+| SQS (Simple Queue Service) | [aws/sqs.md](./aws/sqs.md) | 프로젝트 외 참고 | 2026-03-08 |
+| Kinesis (Data Streams, Fan-out, KCL, Shard) | [aws/kinesis.md](./aws/kinesis.md) | 프로젝트 외 참고 | 2026-03-08 |
 | AWS Batch | [aws/batch.md](./aws/batch.md) | 프로젝트 외 참고 | 2026-03-01 |
 
 ---

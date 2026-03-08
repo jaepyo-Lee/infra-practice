@@ -162,7 +162,55 @@ monitoring (Phase 6 — CloudWatch 알람에서 cluster ARN 참조)
 
 ---
 
-## 5. 참고 자료
+## 5. 스냅샷 (Snapshot)
+
+### 자동 스냅샷 vs 수동 스냅샷
+
+| 구분 | 자동 스냅샷 | 수동 스냅샷 |
+|------|-----------|-----------|
+| 생성 주체 | AWS 자동 (매일) | 사용자/Terraform 직접 |
+| 보존 기간 | 1~35일 설정 | 명시적으로 삭제 전까지 영구 |
+| DB 삭제 시 | **함께 삭제** (기본값) | **유지됨** |
+
+### DB 삭제 시 스냅샷 동작
+
+```
+DB 삭제 시 선택 가능한 옵션:
+  1. 최종 스냅샷 생성 여부 (skip_final_snapshot)
+  2. 자동 스냅샷 보존 여부 (delete_automated_backups)
+```
+
+**핵심**: 자동 스냅샷은 DB와 함께 삭제되지만, 수동 스냅샷은 DB가 없어도 S3에 남는다.
+
+### Terraform 파라미터
+
+```hcl
+resource "aws_rds_cluster" "aurora" {
+  # 삭제 시 최종 스냅샷 생략 여부
+  # dev = true (불필요한 스냅샷 방지)
+  # prod = false + final_snapshot_identifier 설정 필수
+  skip_final_snapshot       = true
+  final_snapshot_identifier = "my-cluster-final-snapshot"  # skip=false일 때만 필요
+
+  # 자동 백업 보존 기간 (1~35일, 0=비활성화)
+  backup_retention_period = 1   # dev: 최소값
+}
+```
+
+### 복원 방식
+
+스냅샷에서 복원하면 **기존 인스턴스에 덮어쓰는 것이 아니라 새 클러스터를 생성**한다.
+
+```
+스냅샷 복원 흐름:
+  기존 클러스터 (손상) → 스냅샷 → 새 클러스터 생성 → 엔드포인트 변경
+```
+
+Aurora는 **Backtrack** 기능도 지원한다 (MySQL 계열만): 새 클러스터 없이 특정 시점으로 되감기 가능.
+
+---
+
+## 6. 참고 자료
 
 - AWS 공식 문서: [Aurora MySQL 버전 호환성](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraMySQL.Overview.html)
 - 검색 키워드: `Aurora MySQL Multi-AZ Failover`, `RDS Cluster Instance 차이`, `Aurora storage architecture`
