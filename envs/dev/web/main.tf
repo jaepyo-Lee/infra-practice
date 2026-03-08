@@ -27,4 +27,5 @@ module "alb" {
   # certificate_arn은 도메인 확보 후 아래 주석을 해제
   # certificate_arn = data.terraform_remote_state.security.outputs.acm_regional_arns["alb_cert"]
   tags              = var.tags
+  enable_cloudfront = true
 }

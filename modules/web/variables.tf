@@ -36,6 +36,18 @@ variable "health_check_path" {
   default     = "/health"
 }
 
+variable "enable_cloudfront" {
+  type        = bool
+  description = "CloudFront 배포 생성 여부"
+  default     = true
+}
+
+variable "price_class" {
+  type        = string
+  description = "CloudFront Price Class. PriceClass_100 / PriceClass_200 / PriceClass_All"
+  default     = "PriceClass_200" # 한국 포함
+}
+
 variable "tags" {
   type        = map(string)
   description = "공통 태그"

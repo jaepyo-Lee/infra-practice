@@ -46,7 +46,7 @@ fi
 apply_module "$ROOT_DIR/envs/dev/vpc"
 
 # Phase 2 — Security Layer
- apply_module "$ROOT_DIR/envs/dev/security"
+apply_module "$ROOT_DIR/envs/dev/security"
 
 # Phase 3 — Web Tier
  apply_module "$ROOT_DIR/envs/dev/web"

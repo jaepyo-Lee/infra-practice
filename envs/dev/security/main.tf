@@ -66,7 +66,7 @@ module "security_group" {
     }
   }
 
-  acm = {
+  /*acm = {
     # ALB용 인증서 — ap-northeast-2 (is_global = false)
     "alb_cert" = {
       domain_name               = "api.example.com"
@@ -81,7 +81,7 @@ module "security_group" {
       subject_alternative_names = ["www.example.com"]
       is_global                 = true
     }
-  }
+  }*/
 
   providers = {
     aws                = aws              # 기본 provider (SG, IAM, NACL 등)

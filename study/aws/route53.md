@@ -1,6 +1,6 @@
 # Route53
 
-> 마지막 업데이트: 2026-03-07
+> 마지막 업데이트: 2026-03-08
 
 ---
 
@@ -52,7 +52,129 @@ IP 하드코딩 대신 도메인으로 참조하면, RDS 엔드포인트가 바�
 
 ---
 
-## 3. NS 레코드 위임 — 외부 도메인 업체와 연결하는 방법
+## 3. DNS 레코드 타입 상세 설명
+
+### DNS가 동작하는 원리
+
+브라우저에 `example.com` 입력하면:
+
+```
+브라우저 → 내 컴퓨터 DNS 캐시 확인
+           → 없으면 ISP DNS 서버에 질문
+                → 없으면 루트 DNS → TLD DNS → NS DNS → 최종 답변
+```
+
+DNS는 결국 **"도메인 이름 → IP 주소"로 변환하는 전화번호부**다. 레코드 타입은 이 전화번호부의 항목 종류다.
+
+---
+
+### 루트 도메인 vs 서브도메인
+
+```
+example.com        ← 루트 도메인 (apex 도메인이라고도 함) — 구매하는 단위
+www.example.com    ← 서브도메인 (별도 구매 불필요, 레코드 추가만으로 충분)
+api.example.com    ← 서브도메인
+dev.example.com    ← 서브도메인
+```
+
+`example.com` 하나만 구매하면 하위 서브도메인은 모두 소유자가 자유롭게 Route53에 레코드를 추가해서 사용할 수 있다.
+
+---
+
+### 레코드 타입별 동작 원리
+
+**A 레코드 — 도메인 → IPv4 주소**
+
+```
+브라우저: "example.com IP 알려줘"
+A 레코드: "1.2.3.4"
+브라우저: 1.2.3.4로 TCP 연결 시작
+```
+
+가장 기본적인 레코드. IP가 고정된 서버(Elastic IP 붙인 EC2 등)에 연결할 때 사용.
+
+**CNAME — 도메인 → 다른 도메인**
+
+```
+브라우저: "www.example.com IP 알려줘"
+CNAME: "xxx.cloudfront.net을 찾아봐"
+브라우저: "xxx.cloudfront.net IP 알려줘" (재조회)
+A 레코드: "1.2.3.4"
+```
+
+IP 대신 다른 도메인을 가리킨다. CloudFront처럼 IP가 수시로 바뀌는 서비스를 서브도메인에 연결할 때 유용. **루트 도메인에는 사용 불가** (DNS 표준 제약).
+
+> **CNAME이 루트 도메인에 안 되는 이유**: 루트 도메인에는 NS, MX 같은 레코드가 반드시 공존해야 한다. DNS 표준상 CNAME이 있는 이름에는 다른 레코드가 공존할 수 없어서, 루트 도메인에 CNAME을 넣으면 NS가 사라져 도메인 전체가 동작 불능이 된다.
+
+**Route53 Alias — CNAME의 루트 도메인 제약을 해결한 AWS 전용 기능**
+
+```
+example.com → Alias → xxx.cloudfront.net   ✅ 루트 도메인에서 가능
+```
+
+타입이 A처럼 보이지만, Route53이 내부에서 CloudFront/ALB의 현재 IP를 실시간으로 조회해서 응답한다. **AWS 리소스(ALB, CloudFront, API Gateway)는 거의 항상 Alias를 사용한다.**
+
+```hcl
+alias {
+  name                   = aws_cloudfront_distribution.main.domain_name
+  zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
+  evaluate_target_health = false  # CloudFront는 health check 미지원
+}
+```
+
+**NS — 이 도메인 담당 네임서버가 누구야?**
+
+```
+인터넷: "example.com 누가 관리해?"
+NS 레코드: "ns-123.awsdns-01.com이 관리함"
+인터넷: (awsdns 서버에게) "example.com IP 알려줘"
+```
+
+DNS 질의가 어느 서버로 가야 하는지 알려주는 출발점. 없으면 아무도 도메인을 찾을 수 없다. 보통 자동 생성되므로 직접 건드릴 일 거의 없음.
+
+**TXT — 소유권 증명 / 이메일 설정**
+
+```
+ACM: "example.com 소유자임을 증명해. 이 값을 DNS에 추가해봐"
+소유자: Route53에 TXT 레코드 추가
+ACM: (확인 후) 인증서 발급
+```
+
+DNS에 특정 값을 추가할 수 있다 = 도메인 소유자라는 증명. ACM 인증서 발급 시 자동으로 추가됨.
+
+---
+
+### 레코드 타입 선택 기준
+
+```
+가리키는 대상이 IP 주소?
+  → A 레코드
+
+가리키는 대상이 도메인이고, 서브도메인?
+  → CNAME
+
+가리키는 대상이 도메인이고, 루트 도메인? 또는 AWS 리소스(ALB, CloudFront)?
+  → Alias (A 타입)
+
+도메인 소유권 증명 / 이메일 설정?
+  → TXT
+```
+
+---
+
+### 시나리오별 레코드 예시
+
+| 상황 | 레코드 타입 | 이유 |
+|------|-----------|------|
+| `example.com` → CloudFront | A (Alias) | 루트 도메인 + IP 고정 안됨 |
+| `www.example.com` → CloudFront | CNAME 또는 A (Alias) | 서브도메인은 CNAME 가능 |
+| `api.example.com` → ALB | A (Alias) | AWS 리소스는 Alias |
+| `example.com` → EC2 Elastic IP | A | IP 고정이므로 그냥 A |
+| ACM 인증서 검증 | CNAME | ACM이 지정한 값 등록 |
+
+---
+
+## 5. NS 레코드 위임 — 외부 도메인 업체와 연결하는 방법
 
 도메인을 가비아, 후이즈 등 외부 업체에서 구입한 경우, Route53이 DNS를 관리하려면 **NS 레코드 위임**이 필요하다.
 
