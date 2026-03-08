@@ -187,8 +187,21 @@ aws_lb_listener_rule    ← 조건별 라우팅 규칙 (선택)
 | `security_groups` | 필수 | 연결할 SG ID 목록 |
 | `enable_deletion_protection` | 선택 | `true`면 삭제 불가. 운영 환경에선 true |
 | `access_logs` | 선택 | S3 버킷에 접근 로그 저장 |
+| `drop_invalid_header_fields` | 선택 | 비정상 HTTP 헤더 차단 여부 (기본 `false`) |
 
 > **실수 포인트**: `subnets`에 Private Subnet을 넣으면 인터넷에서 접근 불가. `internal = false`인 ALB는 반드시 Public Subnet에 위치해야 한다.
+
+#### `drop_invalid_header_fields = true` 설정 이유
+
+기본값 `false`이면 HTTP Smuggling 공격에 취약하다. 비정상적인 HTTP 헤더(예: `Content-Length`가 두 번 들어오는 요청)가 그대로 백엔드 EC2로 전달되어 보안 취약점이 될 수 있다.
+
+```hcl
+resource "aws_lb" "alb" {
+  drop_invalid_header_fields = true  # 보안 Best Practice, tfsec HIGH 이슈
+}
+```
+
+tfsec에서 HIGH 심각도로 잡히는 항목이며, 기능에 영향 없이 한 줄 추가로 해결된다.
 
 ### `aws_lb_target_group` — 대상 그룹
 

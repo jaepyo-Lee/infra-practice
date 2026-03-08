@@ -39,8 +39,14 @@ GitHub Actions → terraform plan → PR 코멘트에 결과 출력 → 사람�
 # 설치
 brew install tfsec
 
-# 실행
+# 전체 실행
 tfsec .
+
+# 심각도 필터 (HIGH 이상만)
+tfsec . --minimum-severity HIGH
+
+# 특정 레이어만
+tfsec envs/dev/network/
 ```
 
 출력 예시:
@@ -55,6 +61,41 @@ GitHub Actions에 통합:
 - name: tfsec
   uses: aquasecurity/tfsec-action@v1.0.0
 ```
+
+#### tfsec 이슈 분류 기준 (실제 프로젝트 경험)
+
+tfsec 결과를 보면 모두 고쳐야 할 것처럼 보이지만, 실제로는 3가지로 분류해야 한다:
+
+**1. 실제 수정 필요**
+```
+ALB drop_invalid_header_fields 미설정  → HTTP Smuggling 취약, 한 줄 추가로 해결
+CloudFront viewer_protocol_policy HTTP 허용 → 평문 통신 가능, redirect-to-https로 변경
+S3 버킷 SSE 암호화 없음               → AES256 또는 aws:kms로 암호화 추가
+SNS/CloudTrail KMS 암호화 없음        → alias/aws/sns 등 AWS 관리 키 추가
+```
+
+**2. 의도적 설계 — tfsec ignore 처리**
+```
+HTTP listener 사용  → 리다이렉트 전용 (80→443), HTTP가 맞음
+ALB internal=false  → 인터넷 facing ALB는 당연히 public
+```
+
+```hcl
+# 해당 라인 위에 주석으로 ignore 추가
+# tfsec:ignore:aws-elb-http-not-used
+resource "aws_lb_listener" "http" { ... }
+
+# tfsec:ignore:aws-elb-alb-not-public
+internal = false
+```
+
+**3. 비용/환경 고려 — dev 한정 ignore**
+```
+RDS CMK 미사용    → storage_encrypted=true (AWS 관리 키)로 충분, CMK는 compliance 요구 시만
+CloudTrail KMS    → KMS 키 생성 비용 발생, dev 환경에서는 생략 가능
+```
+
+> **원칙**: tfsec는 보수적으로 판단하므로 결과를 그대로 따르지 않고, 설계 의도와 비용을 고려해 분류해야 한다.
 
 | | tfsec | checkov |
 |---|---|---|

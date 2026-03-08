@@ -152,6 +152,25 @@ resource "aws_route53_record" "root" {
 
 ---
 
+### `viewer_protocol_policy` — 사용자 → CloudFront 구간 프로토콜
+
+`viewer_protocol_policy`는 사용자(브라우저)와 CloudFront 사이의 프로토콜 정책이다.
+`default_cache_behavior` 및 `ordered_cache_behavior` 블록에 설정한다.
+
+| 값 | 동작 | tfsec |
+|----|------|-------|
+| `allow-all` | HTTP + HTTPS 모두 허용 | ❌ HIGH 이슈 (평문 통신 허용) |
+| `redirect-to-https` | HTTP 요청을 301로 HTTPS 리다이렉트 | ✅ 권장 |
+| `https-only` | HTTP 요청 자체를 거부 (403) | ✅ 최고 보안 |
+
+**실무 선택 기준:**
+- 일반 서비스: `redirect-to-https` — 사용자가 http://로 접근해도 자동으로 https://로 이동
+- 보안 민감 서비스: `https-only` — http:// 접근 자체를 막아버림
+
+tfsec은 `allow-all`이면 HIGH 심각도로 잡는다. `redirect-to-https` 또는 `https-only`로 설정해야 해소된다.
+
+---
+
 ### 실무에서 자주 하는 실수
 
 1. **API 서버에 캐시 적용** → TTL 설정하면 API 응답이 캐시되어 오래된 데이터 반환. API는 TTL=0으로 설정
