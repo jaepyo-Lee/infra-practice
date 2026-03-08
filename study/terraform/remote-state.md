@@ -210,6 +210,66 @@ data "aws_security_group" "cloudshell_instance" {
 
 ---
 
+## 9. 에러 트러블슈팅 — Remote State 참조 시 자주 나는 에러
+
+### 에러 1: `object with no attributes` — 빈 map 인덱싱
+
+```
+Error: Invalid index
+  data.terraform_remote_state.security.outputs.sg_ids is object with no attributes
+  The given key does not identify an element in this collection value.
+```
+
+**원인:** 참조하는 output이 빈 map `{}`을 반환함.
+
+예: `sg_ids["alb_sg"]` 를 참조했는데 `sg_ids = {}` 인 상황.
+
+**왜 빈 map이 나오는가?**
+- 의존 레이어가 아직 apply되지 않아 리소스가 0개 → `for` 표현식이 빈 map 반환
+- 의존 레이어를 apply했지만, 해당 변수(예: `var.sg`)에 값이 없어 for_each가 실행 안 됨
+
+**해결:** apply 순서를 반드시 지킨다.
+
+```
+network apply → security apply → web apply → app apply
+```
+
+각 레이어를 apply하기 전에 의존하는 레이어의 output이 실제로 값을 가지고 있는지 확인:
+
+```bash
+cd envs/dev/security
+terraform output sg_ids
+# {} 이면 apply 안 된 것
+```
+
+---
+
+### 에러 2: `Invalid Attribute Combination` — null값을 AWS provider가 "미지정"으로 처리
+
+```
+Error: Invalid Attribute Combination
+  Attribute "vpc_id" must be specified when "target_type" is "instance".
+  Path: target_type
+```
+
+**겉보기**: 코드에 `vpc_id = var.vpc_id`가 명확히 있는데 에러 발생.
+
+**실제 원인:** `var.vpc_id`가 `null`을 받고 있음.
+
+`data.terraform_remote_state.network.outputs.vpc_id` → 네트워크 레이어가 apply되지 않은 상태면 이 값이 null을 반환 → AWS provider가 null을 "속성 미지정"으로 처리 → validation 에러.
+
+**해결:** 네트워크 레이어를 먼저 apply하면 `vpc_id`가 유효한 값을 가지게 되어 에러가 사라진다.
+
+---
+
+### 공통 원칙
+
+> **Remote state를 참조하는 레이어는 반드시 의존 레이어가 먼저 apply된 상태여야 한다.**
+
+에러 메시지가 "코드에 분명히 있는데 없다고 한다"는 형태라면, 먼저 upstream 레이어의 상태를 점검할 것.
+
+---
+
 ## 관련 파일
 
 - [core-blocks.md](./core-blocks.md) — output 블록 작성법

@@ -461,6 +461,66 @@ SG처럼 환경마다 추가될 수 있는 리소스는 **맵 전체 노출**이
 
 ---
 
+## 12. `terraform {}` 블록을 리소스 파일에 혼재
+
+### 문제
+
+```hcl
+# modules/web/alb.tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "6.17.0"   # ← 다른 파일/레이어와 다른 버전
+    }
+  }
+}
+
+resource "aws_lb" "alb" { ... }  # ← 리소스와 섞임
+```
+
+### 왜 나쁜가
+
+1. **버전 충돌**: 호출자(envs/)가 `~> 5.0`을 쓰는데 모듈이 `6.17.0`을 선언하면 두 constraint를 동시에 만족하는 버전이 없음 → `terraform init` 실패
+2. **발견 어려움**: `alb.tf` 안에 숨어 있어 버전이 어디서 왔는지 추적하기 어려움
+3. **관심사 혼재**: `alb.tf`는 ALB 리소스를 정의하는 파일. Terraform 메타 설정이 섞이면 파일의 역할이 불명확해짐
+
+### 올바른 방법
+
+`terraform {}` 블록 (required_providers, required_version)은 **반드시 `versions.tf`로 분리**:
+
+```
+modules/web/
+  versions.tf   ← terraform { required_providers {} } 여기에만
+  alb.tf        ← resource만
+  cloudfront.tf ← resource만
+```
+
+```hcl
+# modules/web/versions.tf
+terraform {
+  required_providers {
+    aws = {
+      source                = "hashicorp/aws"
+      version               = "~> 5.0"
+      configuration_aliases = [aws.us_east_1]  # alias 선언도 여기에
+    }
+  }
+}
+```
+
+### 버전 통일 전략
+
+여러 레이어/모듈에서 버전 constraint가 달라 충돌할 때:
+
+| 상황 | 선택 |
+|------|------|
+| 하나만 다른 버전 | 그 하나를 내려서 전체 통일 |
+| 전체를 새 버전으로 올리려는 경우 | 모든 파일 동시 업데이트 후 `terraform init -upgrade` |
+| 보안 패치/버그픽스가 새 버전에 있는 경우 | 올리는 것 고려 |
+
+---
+
 ## 요약 — 체크리스트
 
 내 코드에 아래 패턴이 있는지 확인:
@@ -476,6 +536,8 @@ SG처럼 환경마다 추가될 수 있는 리소스는 **맵 전체 노출**이
 | 공유 상수 | JSON 파일 + file() | locals {} 또는 variable + tfvars |
 | ignore_changes | 보안/배포 설정 포함 | CI/CD, Auto Scaling 관리 속성만 |
 | host_header | 와일드카드 | 명시적 도메인 |
+| `terraform {}` 위치 | 리소스 파일에 혼재 | `versions.tf`로 분리 |
+| provider 버전 | 레이어/모듈마다 다름 | 전체 통일, 하나만 튀면 내려서 맞춤 |
 
 ---
 

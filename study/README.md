@@ -29,8 +29,13 @@ study/
 | ACM (AWS Certificate Manager) | [aws/acm.md](./aws/acm.md) | Phase 2 — Security Layer | 2026-03-07 |
 | Route53 (DNS, Hosted Zone, Public/Private) | [aws/route53.md](./aws/route53.md) | Phase 3 — Web Tier | 2026-03-07 |
 | ALB (Application Load Balancer) | [aws/alb.md](./aws/alb.md) | Phase 3 — Web Tier | 2026-03-01 |
+| S3 (Simple Storage Service) | [aws/s3.md](./aws/s3.md) | Phase 2 — Security Layer | 2026-03-07 |
+| CloudFront | [aws/cloudfront.md](./aws/cloudfront.md) | Phase 3 — Web Tier | 2026-03-08 |
+| WAF (Web Application Firewall) | [aws/waf.md](./aws/waf.md) | Phase 3 — Web Tier | 2026-03-08 |
 | EC2 (Elastic Compute Cloud) | [aws/ec2.md](./aws/ec2.md) | Phase 4 — Application Tier | 2026-02-28 |
+| ASG (Auto Scaling Group) & Launch Template | [aws/asg.md](./aws/asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-07 |
+| CloudWatch | [aws/cloudwatch.md](./aws/cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
 | AWS Batch | [aws/batch.md](./aws/batch.md) | 프로젝트 외 참고 | 2026-03-01 |
 
 ---

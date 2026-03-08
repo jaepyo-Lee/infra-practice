@@ -17,6 +17,16 @@ provider "aws" {
   }
 }
 
+# CloudFront WAF는 us-east-1에 생성해야 함
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = var.tags
+  }
+}
+
 module "alb" {
   source = "../../../modules/web"
 
@@ -28,4 +38,10 @@ module "alb" {
   # certificate_arn = data.terraform_remote_state.security.outputs.acm_regional_arns["alb_cert"]
   tags              = var.tags
   enable_cloudfront = true
+
+  # WAF(us-east-1)를 위해 provider alias 전달
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 }

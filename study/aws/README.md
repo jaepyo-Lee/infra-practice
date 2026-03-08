@@ -18,5 +18,7 @@
 | Route53 (DNS, Hosted Zone, Public/Private) | [route53.md](./route53.md) | Phase 3 — Web Tier | 2026-03-08 |
 | ALB (Application Load Balancer) | [alb.md](./alb.md) | Phase 3 — Web Tier | 2026-03-07 |
 | CloudFront | [cloudfront.md](./cloudfront.md) | Phase 3 — Web Tier | 2026-03-08 |
+| WAF (Web Application Firewall) | [waf.md](./waf.md) | Phase 3 — Web Tier | 2026-03-08 |
+| ASG (Auto Scaling Group) & Launch Template | [asg.md](./asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | CloudWatch | [cloudwatch.md](./cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

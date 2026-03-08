@@ -13,3 +13,5 @@
 | Remote State: terraform_remote_state, 멀티 State 아키텍처, _shared 패턴, 동적 output key 참조 | [remote-state.md](./remote-state.md) | 2026-03-07 |
 | 함수 & 표현식: coalesce, try, dynamic block, for 표현식, jsonencode, validation, optional | [functions-and-expressions.md](./functions-and-expressions.md) | 2026-03-07 |
 | 안티패턴 & 개선 포인트: God Module, ALB 공유, profile 하드코딩, ID 하드코딩, ignore_changes 과용 | [anti-patterns.md](./anti-patterns.md) | 2026-03-07 |
+| Provider: alias, 왜 variable 불가, module에 전달하는 법, us-east-1 패턴 | [providers.md](./providers.md) | 2026-03-08 |
+| CLI 명령어 & 옵션: init/plan/apply/destroy/state/import 옵션 전체, 실전 시나리오 | [cli-commands.md](./cli-commands.md) | 2026-03-08 |

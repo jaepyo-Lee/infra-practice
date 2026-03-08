@@ -36,6 +36,12 @@ variable "health_check_path" {
   default     = "/health"
 }
 
+variable "enable_waf" {
+  type        = bool
+  description = "WAF Web ACL 생성 여부. true면 us-east-1 provider가 반드시 전달되어야 함"
+  default     = true
+}
+
 variable "enable_cloudfront" {
   type        = bool
   description = "CloudFront 배포 생성 여부"

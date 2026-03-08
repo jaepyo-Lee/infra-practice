@@ -340,6 +340,11 @@ README.md 하단의 "진행 현황" 테이블을 실제 구현 상태로 갱신�
 - `default_tags`를 provider에 설정해 모든 리소스에 자동 태그를 적용한다
 - `source`는 파일(`.tf`)이 아닌 디렉토리 경로를 가리킨다
 
+**versions.tf (modules)**
+- `terraform {}` 블록 (required_providers, required_version)은 리소스 파일이 아닌 `versions.tf`로 분리한다
+- provider alias를 받는 모듈에는 `configuration_aliases = [aws.us_east_1, ...]` 를 선언한다
+- 모든 레이어/모듈의 provider 버전이 통일되어 있는지 확인한다 (하나만 다를 경우 그 하나를 내려서 통일)
+
 **CIDR 설계**
 - VPC용 CIDR은 `/16` 이상을 사용한다 (`/24`는 단일 서브넷 크기)
 

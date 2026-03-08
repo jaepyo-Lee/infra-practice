@@ -81,5 +81,8 @@ resource "aws_cloudfront_distribution" "main" {
     error_caching_min_ttl = 0
   }
 
+  # WAF Web ACL 연결 — enable_waf = false면 연결 안 함
+  web_acl_id = var.enable_waf ? aws_wafv2_web_acl.main[0].arn : null
+
   tags = merge(var.tags, { Name = "${var.name}-cf" })
 }

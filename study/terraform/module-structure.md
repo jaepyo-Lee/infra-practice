@@ -133,16 +133,35 @@ module "security" {
 
 **child module에서 alias를 받으려면 `configuration_aliases` 선언 필요**
 
+Terraform은 모듈을 분석할 때 "이 모듈이 어떤 provider를 쓰는지" 정적으로 파악해야 한다. `provider = aws.us_east_1`을 쓰는 리소스가 모듈 안에 있어도, 그 alias를 "받겠다"고 선언하지 않으면 Terraform이 인식하지 못한다.
+
+**선언하지 않으면:**
+- 경고: `"Reference to undefined provider"` — alias가 외부에서 전달되어도 모듈이 모름
+- 잘못된 리전에 리소스가 생성될 수 있음 (WAF가 us-east-1 대신 기본 리전에 생성)
+
+**선언 위치: 반드시 `versions.tf` (별도 파일)에 분리**
+
 ```hcl
-# modules/security/versions.tf
+# modules/web/versions.tf
 terraform {
   required_providers {
     aws = {
       source                = "hashicorp/aws"
+      version               = "~> 5.0"
       configuration_aliases = [aws.us_east_1, aws.ap_northeast_2]
     }
   }
 }
+```
+
+`configuration_aliases`에 선언한 alias는 모듈 안에서 `provider = aws.us_east_1` 형태로 리소스에 지정할 수 있다. 호출자가 `providers` 블록으로 전달한 provider와 연결된다.
+
+```
+호출자: providers = { aws.us_east_1 = aws.us_east_1 }
+                             ↓
+모듈: configuration_aliases = [aws.us_east_1]   ← "이 alias를 받겠다"
+                             ↓
+리소스: provider = aws.us_east_1                ← 이제 사용 가능
 ```
 
 ---

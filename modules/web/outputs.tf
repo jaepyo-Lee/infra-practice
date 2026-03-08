@@ -27,3 +27,8 @@ output "cloudfront_distribution_id" {
   value       = var.enable_cloudfront ? aws_cloudfront_distribution.main[0].id : null
   description = "WAF 연결 및 Cache Invalidation에 사용. enable_cloudfront = false면 null"
 }
+
+output "waf_arn" {
+  value       = var.enable_waf ? aws_wafv2_web_acl.main[0].arn : null
+  description = "WAF Web ACL ARN. enable_waf = false면 null"
+}
