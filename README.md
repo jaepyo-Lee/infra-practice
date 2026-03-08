@@ -104,10 +104,10 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 > 목표: 글로벌 트래픽을 안정적으로 수용하는 엔트리포인트를 구축한다
 
 - [ ] ACM 인증서 연결 (HTTPS)
-- [ ] Application Load Balancer (ALB) 구성
-- [ ] ALB 리스너 규칙 (HTTP → HTTPS 리다이렉트)
-- [ ] CloudFront 배포 (오리진: ALB)
-- [ ] WAF Web ACL 연결 (기본 룰셋 적용)
+- [x] Application Load Balancer (ALB) 구성
+- [x] ALB 리스너 규칙 (HTTP → HTTPS 리다이렉트)
+- [x] CloudFront 배포 (오리진: ALB)
+- [x] WAF Web ACL 연결 (기본 룰셋 적용)
 - [ ] Route 53 레코드 연결 (Alias)
 
 **체크포인트:** `https://` 도메인으로 접근 시 CloudFront → ALB → App 흐름이 정상 동작하는가?
@@ -117,12 +117,12 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 4 — 앱 티어 (Application Tier)
 > 목표: 트래픽에 따라 자동으로 확장/축소되는 탄력적인 앱 서버를 구현한다
 
-- [ ] Launch Template 작성 (AMI, 인스턴스 타입, User Data)
-- [ ] Auto Scaling Group 구성 (Min/Max/Desired)
-- [ ] ALB Target Group 연결
-- [ ] Scaling Policy (CPU 기반 Target Tracking)
-- [ ] EC2 Instance Profile (IAM Role 연결)
-- [ ] Session Manager (Bastion 없이 접속)
+- [x] Launch Template 작성 (AMI, 인스턴스 타입, User Data)
+- [x] Auto Scaling Group 구성 (Min/Max/Desired)
+- [x] ALB Target Group 연결
+- [x] Scaling Policy (CPU 기반 Target Tracking)
+- [x] EC2 Instance Profile (IAM Role 연결)
+- [x] Session Manager (Bastion 없이 접속)
 
 **체크포인트:** 부하 발생 시 인스턴스가 자동으로 늘어나고, ALB가 트래픽을 고르게 분산하는가?
 
@@ -276,8 +276,8 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 |-------|------|------|
 | Phase 1 | Network Foundation | ✅ 완료 |
 | Phase 2 | Security Layer | 🔄 진행중 (5/6) |
-| Phase 3 | Web Tier | 🔲 미시작 |
-| Phase 4 | Application Tier | 🔲 미시작 |
+| Phase 3 | Web Tier | 🔄 진행중 (4/6) |
+| Phase 4 | Application Tier | ✅ 완료 |
 | Phase 5 | Database Tier | 🔲 미시작 |
 | Phase 6 | Observability | 🔲 미시작 |
 | Phase 7 | IaC Best Practices | 🔄 진행중 (4/7) |

@@ -20,5 +20,6 @@
 | CloudFront | [cloudfront.md](./cloudfront.md) | Phase 3 — Web Tier | 2026-03-08 |
 | WAF (Web Application Firewall) | [waf.md](./waf.md) | Phase 3 — Web Tier | 2026-03-08 |
 | ASG (Auto Scaling Group) & Launch Template | [asg.md](./asg.md) | Phase 4 — Application Tier | 2026-03-08 |
+| EC2 / Launch Template / ASG (통합 정리) | [ec2-asg.md](./ec2-asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | CloudWatch | [cloudwatch.md](./cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

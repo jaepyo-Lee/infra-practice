@@ -111,6 +111,33 @@ dynamic "load_balancer" {
 `load_balancer.value` — `for_each`의 현재 아이템에 접근하는 방법.
 iterator 이름은 블록 이름(`load_balancer`)이 기본이고, `iterator = "별칭"` 으로 바꿀 수 있다.
 
+**이 프로젝트 실사용 예시 (modules/web/alb.tf)**
+```hcl
+# certificate_arn이 있을 때만 redirect 블록 생성
+resource "aws_lb_listener" "http" {
+  default_action {
+    type = var.certificate_arn != null ? "redirect" : "forward"
+
+    dynamic "redirect" {
+      for_each = var.certificate_arn != null ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+}
+```
+
+**`dynamic` vs `count`/`for_each` 차이**
+
+| | `count` / `for_each` | `dynamic` |
+|---|---|---|
+| 반복 대상 | 리소스 전체 | 리소스 내부 블록 |
+| 예시 | EC2 3개, SG 5개 | ingress 규칙 여러 개, redirect 조건부 |
+| 위치 | resource 선언 밖 | resource 블록 안 |
+
 ---
 
 ## 5. `for` 표현식 — 컬렉션 변환
