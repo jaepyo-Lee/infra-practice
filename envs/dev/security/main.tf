@@ -28,9 +28,9 @@ provider "aws" {
 }
 
 module "security_group" {
-  source = "../../../modules/security"
-  vpc_id =data.terraform_remote_state.network.outputs.vpc_id
-  sg = local.security_groups
+  source   = "../../../modules/security"
+  vpc_id   = data.terraform_remote_state.network.outputs.vpc_id
+  sg       = local.security_groups
   sg_rules = local.sg_rules
   iam_roles = {
     "app_role" = {
@@ -45,9 +45,9 @@ module "security_group" {
         }]
       })
       managed_policy_arns = [
-        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",   # Session Manager
-        "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",    # CloudWatch Logs
-        "arn:aws:iam::aws:policy/SecretsManagerReadWrite",        # Secrets Manager
+        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore", # Session Manager
+        "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",  # CloudWatch Logs
+        "arn:aws:iam::aws:policy/SecretsManagerReadWrite",      # Secrets Manager
       ]
     }
   }
@@ -56,11 +56,11 @@ module "security_group" {
     rds_credentials = {
       name                    = "myapp/dev/rds-credentials"
       description             = "Dev RDS 접속 자격증명"
-      recovery_window_in_days = 0  # 실습 환경: 즉시 삭제 가능
+      recovery_window_in_days = 0 # 실습 환경: 즉시 삭제 가능
       secret_value = jsonencode({
         username = "admin"
-        password = "change-me-before-apply"  # 실제 값은 apply 전 교체 또는 수동 업데이트
-        host     = "TBD"  # RDS 구현 후 업데이트
+        password = "change-me-before-apply" # 실제 값은 apply 전 교체 또는 수동 업데이트
+        host     = "TBD"                    # RDS 구현 후 업데이트
         port     = 3306
       })
     }
@@ -84,8 +84,8 @@ module "security_group" {
   }*/
 
   providers = {
-    aws                = aws              # 기본 provider (SG, IAM, NACL 등)
-    aws.us_east_1      = aws.us_east_1   # CloudFront용 ACM
+    aws                = aws                # 기본 provider (SG, IAM, NACL 등)
+    aws.us_east_1      = aws.us_east_1      # CloudFront용 ACM
     aws.ap_northeast_2 = aws.ap_northeast_2 # ALB용 ACM
   }
 

@@ -15,3 +15,4 @@
 | 안티패턴 & 개선 포인트: God Module, ALB 공유, profile 하드코딩, ID 하드코딩, ignore_changes 과용 | [anti-patterns.md](./anti-patterns.md) | 2026-03-07 |
 | Provider: alias, 왜 variable 불가, module에 전달하는 법, us-east-1 패턴 | [providers.md](./providers.md) | 2026-03-08 |
 | CLI 명령어 & 옵션: init/plan/apply/destroy/state/import 옵션 전체, 실전 시나리오 | [cli-commands.md](./cli-commands.md) | 2026-03-08 |
+| Database Tier 리소스: random_password, aws_rds_cluster, aws_elasticache_replication_group 핵심 파라미터 | [database-resources.md](./database-resources.md) | 2026-03-08 |

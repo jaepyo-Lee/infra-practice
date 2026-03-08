@@ -3,7 +3,7 @@
 > **이 파일의 범위**: 파일/폴더 구조 컨벤션, provider 위치 규칙, 모듈별 outputs 목록
 > **개념 및 데이터 흐름**: [core-blocks.md](./core-blocks.md) 참고
 
-마지막 업데이트: 2026-03-07
+마지막 업데이트: 2026-03-08
 
 ---
 
@@ -300,6 +300,53 @@ variable "iam_roles" {
 | 필드 추가 필요 | `optional()` 로 non-breaking 확장 |
 | 타입 자체를 바꿔야 함 | 불가피한 breaking change → 모든 호출자 동시 수정 |
 | 모듈이 너무 비대해짐 | 별도 모듈로 분리 검토 |
+
+---
+
+---
+
+## 7. 이벤트 처리 서비스의 레이어 배치 패턴 (SNS, Kinesis 등)
+
+SNS, Kinesis, SQS 같은 이벤트 처리 서비스는 **어느 레이어에 넣을지** 판단이 필요하다.
+두 가지 패턴이 있다.
+
+### 패턴 1: 기존 레이어에 통합 (서비스가 특정 레이어와 강하게 결합된 경우)
+
+```
+envs/dev/monitoring/
+├── main.tf  ← CloudWatch + SNS + CloudTrail 한 번에
+└── outputs.tf
+```
+
+SNS가 "CloudWatch 알람 알림 전용"이라면 monitoring 레이어에 통합하는 것이 자연스럽다.
+불필요한 레이어 분리를 줄이고 remote_state 참조도 단순해진다.
+
+### 패턴 2: 독립 레이어 분리 (여러 레이어가 참조하는 경우)
+
+```
+envs/dev/messaging/         ← 독립 레이어
+├── main.tf  ← SNS Topic, SQS Queue, Kinesis Stream 정의
+└── outputs.tf  ← topic_arn, stream_arn 노출
+
+envs/dev/app/
+└── data.tf  ← messaging remote_state에서 topic_arn 참조
+
+envs/dev/monitoring/
+└── data.tf  ← messaging remote_state에서 topic_arn 참조
+```
+
+Kinesis처럼 앱 → Kinesis → Lambda → DB로 여러 레이어가 데이터를 주고받는다면 독립 레이어가 맞다.
+
+### 판단 기준
+
+| 상황 | 권장 패턴 |
+|------|----------|
+| 하나의 레이어에서만 사용 | 해당 레이어에 통합 (monitoring에 SNS) |
+| 여러 레이어가 참조 | 독립 레이어 분리 (messaging/) |
+| 팀 소유권이 분리됨 | 독립 레이어 분리 |
+| 단순 알림 목적 | 통합 |
+
+이 프로젝트 권장: Phase 6 monitoring 레이어에 SNS를 통합 (CloudWatch Alarm → SNS → Email 구조)
 
 ---
 

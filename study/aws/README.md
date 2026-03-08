@@ -22,4 +22,6 @@
 | ASG (Auto Scaling Group) & Launch Template | [asg.md](./asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | EC2 / Launch Template / ASG (통합 정리) | [ec2-asg.md](./ec2-asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | CloudWatch | [cloudwatch.md](./cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
+| RDS Aurora (Aurora MySQL, Multi-AZ, Cluster 구조) | [rds-aurora.md](./rds-aurora.md) | Phase 5 — Database Tier | 2026-03-08 |
+| ElastiCache Redis (Replication Group, Failover, 암호화) | [elasticache.md](./elasticache.md) | Phase 5 — Database Tier | 2026-03-08 |
 | AWS Batch | [batch.md](./batch.md) | 프로젝트 외 참고 | 2026-03-01 |

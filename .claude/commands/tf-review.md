@@ -105,14 +105,11 @@ dev/prod 환경 분리가 올바르게 구현되어 있는지 확인한다:
 - 탐색한 모듈 목록을 README.md의 모듈 체크리스트와 대조한다
 - 참고 예시 (프로젝트 진행에 따라 달라질 수 있음):
   - `modules/network/` (vpc → network로 리팩토링됨)
-  - `modules/security_groups/`
-  - `modules/alb/`
-  - `modules/cloudfront/`
-  - `modules/asg/`
-  - `modules/rds/`
-  - `modules/elasticache/`
+  - `modules/security/` (SG, NACL, IAM, Secrets Manager, ACM, S3 통합)
+  - `modules/web/` (ALB, CloudFront, WAF 통합)
+  - `modules/app/` (Launch Template, ASG, Scaling Policy 통합)
+  - `modules/database/` (RDS Aurora + ElastiCache 통합)
   - `modules/monitoring/`
-  - `modules/iam/`
 
 **모듈 인터페이스 품질**
 - `variables.tf`에 모든 입력값이 `type`, `description`, `default`(선택)와 함께 선언되어 있는지

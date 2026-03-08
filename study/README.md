@@ -36,6 +36,9 @@ study/
 | ASG (Auto Scaling Group) & Launch Template | [aws/asg.md](./aws/asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | ECS (Elastic Container Service) | [aws/ecs.md](./aws/ecs.md) | Phase 4 — Application Tier | 2026-03-07 |
 | CloudWatch | [aws/cloudwatch.md](./aws/cloudwatch.md) | Phase 6 — Observability | 2026-03-08 |
+| RDS Aurora (Aurora MySQL, Multi-AZ, Cluster 구조, Failover) | [aws/rds-aurora.md](./aws/rds-aurora.md) | Phase 5 — Database Tier | 2026-03-08 |
+| ElastiCache Redis (Replication Group, Failover, 암호화) | [aws/elasticache.md](./aws/elasticache.md) | Phase 5 — Database Tier | 2026-03-08 |
+| EC2 + ASG + Launch Template (통합 정리) | [aws/ec2-asg.md](./aws/ec2-asg.md) | Phase 4 — Application Tier | 2026-03-08 |
 | AWS Batch | [aws/batch.md](./aws/batch.md) | 프로젝트 외 참고 | 2026-03-01 |
 
 ---
@@ -55,3 +58,6 @@ study/
 | Remote State: terraform_remote_state, 멀티 State 아키텍처, _shared 패턴 | [terraform/remote-state.md](./terraform/remote-state.md) | 2026-03-07 |
 | 함수 & 표현식: coalesce, try, dynamic block, for 표현식, jsonencode, validation | [terraform/functions-and-expressions.md](./terraform/functions-and-expressions.md) | 2026-03-07 |
 | 안티패턴 & 개선 포인트: 실무 코드에서 발견한 잘못된 패턴들 | [terraform/anti-patterns.md](./terraform/anti-patterns.md) | 2026-03-07 |
+| Provider: alias, 왜 variable 불가, module에 전달하는 법, us-east-1 패턴 | [terraform/providers.md](./terraform/providers.md) | 2026-03-08 |
+| CLI 명령어 & 옵션: init/plan/apply/destroy/state/import 옵션 전체, 실전 시나리오 | [terraform/cli-commands.md](./terraform/cli-commands.md) | 2026-03-08 |
+| Database Tier 리소스: random_password, aws_rds_cluster, aws_elasticache_replication_group 핵심 파라미터 | [terraform/database-resources.md](./terraform/database-resources.md) | 2026-03-08 |

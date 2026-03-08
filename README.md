@@ -131,13 +131,13 @@ AWS 클라우드 아키텍처 역량을 갖춘 엔지니어가 되기 위해, **
 ### Phase 5 — 데이터베이스 티어 (Database Tier)
 > 목표: 고가용성과 데이터 안전성을 갖춘 데이터베이스 계층을 구성한다
 
-- [ ] RDS Subnet Group 생성
-- [ ] RDS Aurora MySQL (Multi-AZ, Primary + Replica)
-- [ ] RDS 파라미터 그룹 / 옵션 그룹
-- [ ] ElastiCache Subnet Group 생성
-- [ ] ElastiCache Redis (클러스터 모드)
-- [ ] 자동 백업 및 스냅샷 정책
-- [ ] Secrets Manager 연동 (패스워드 자동 로테이션)
+- [x] RDS Subnet Group 생성
+- [x] RDS Aurora MySQL (Multi-AZ, Primary + Replica)
+- [x] RDS 파라미터 그룹 / 옵션 그룹
+- [x] ElastiCache Subnet Group 생성
+- [x] ElastiCache Redis (클러스터 모드)
+- [x] 자동 백업 및 스냅샷 정책
+- [x] Secrets Manager 연동 (패스워드 자동 로테이션)
 
 **체크포인트:** App 서버에서 RDS와 Redis에 정상 연결되고, Primary 장애 시 자동 Failover가 되는가?
 
@@ -278,7 +278,7 @@ cd envs/dev/6-monitoring && terraform init && terraform apply
 | Phase 2 | Security Layer | 🔄 진행중 (5/6) |
 | Phase 3 | Web Tier | 🔄 진행중 (4/6) |
 | Phase 4 | Application Tier | ✅ 완료 |
-| Phase 5 | Database Tier | 🔲 미시작 |
+| Phase 5 | Database Tier | ✅ 완료 |
 | Phase 6 | Observability | 🔲 미시작 |
 | Phase 7 | IaC Best Practices | 🔄 진행중 (4/7) |
 
