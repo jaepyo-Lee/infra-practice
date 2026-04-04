@@ -66,3 +66,6 @@ study/
 | Provider: alias, 왜 variable 불가, module에 전달하는 법, us-east-1 패턴 | [terraform/providers.md](./terraform/providers.md) | 2026-03-08 |
 | CLI 명령어 & 옵션: init/plan/apply/destroy/state/import 옵션 전체, 실전 시나리오 | [terraform/cli-commands.md](./terraform/cli-commands.md) | 2026-03-08 |
 | Database Tier 리소스: random_password, aws_rds_cluster, aws_elasticache_replication_group 핵심 파라미터 | [terraform/database-resources.md](./terraform/database-resources.md) | 2026-03-08 |
+| State 관리 실무: moved 블록, state mv/rm/import, 리팩토링 시나리오, 실수 복구 | [terraform/state-management.md](./terraform/state-management.md) | 2026-04-04 |
+| 실무 고려사항: prod destroy 방지, state 보안, 버전 고정, CI/CD, 드리프트, 비용 관리 | [terraform/production-considerations.md](./terraform/production-considerations.md) | 2026-04-04 |
+| count / for_each / dynamic 심층: 차이점, 중간 삭제 위험, 복잡한 객체 map, dynamic 중첩 | [terraform/count-foreach-dynamic.md](./terraform/count-foreach-dynamic.md) | 2026-04-04 |
